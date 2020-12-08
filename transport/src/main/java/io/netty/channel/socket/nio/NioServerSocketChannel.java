@@ -51,6 +51,11 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
+    /**
+     * 创建jdk底层的channel
+     * @param provider 选择器提供者
+     * @return jdk底层的channel
+     */
     private static ServerSocketChannel newSocket(SelectorProvider provider) {
         try {
             /**
@@ -58,6 +63,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
              *  {@link SelectorProvider#provider()} which is called by each ServerSocketChannel.open() otherwise.
              *
              *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
+             *
+             *  很简单  调用jdk底层提供的方法创建一个channel
              */
             return provider.openServerSocketChannel();
         } catch (IOException e) {
@@ -69,9 +76,11 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private final ServerSocketChannelConfig config;
 
     /**
-     * Create a new instance
+     * 创建一个新实例
      */
     public NioServerSocketChannel() {
+        //DEFAULT_SELECTOR_PROVIDER:SelectorProvider.provider()
+        //newSocket 创建一个channel
         this(newSocket(DEFAULT_SELECTOR_PROVIDER));
     }
 
@@ -86,7 +95,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance using the given {@link ServerSocketChannel}.
      */
     public NioServerSocketChannel(ServerSocketChannel channel) {
+        //保存对应的配置项  同时保存关注连接事件 OP_ACCEPT
         super(null, channel, SelectionKey.OP_ACCEPT);
+        //创建一个配置类 你保存的是当前对象以及jdk底层的socket
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 
