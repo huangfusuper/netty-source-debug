@@ -142,8 +142,10 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         if (PlatformDependent.javaVersion() >= 7) {
+            //jdk底层的绑定
             javaChannel().bind(localAddress, config.getBacklog());
         } else {
+            //jdk底层的绑定
             javaChannel().socket().bind(localAddress, config.getBacklog());
         }
     }

@@ -29,6 +29,7 @@ public class JdkNioServer {
                     while (iterator.hasNext()) {
                        try {
                            selectionKey = iterator.next();
+                           iterator.remove();
                            SelectableChannel channel = selectionKey.channel();
                            if(selectionKey.isValid() && selectionKey.isAcceptable()){
                                ServerSocketChannel serverChannel = (ServerSocketChannel) channel;
@@ -45,9 +46,10 @@ public class JdkNioServer {
                                socketChannel.write(allocate);
                            }
                        }catch (Exception e) {
-                           iterator.remove();
-                       }finally {
-                           iterator.remove();
+                           if (selectionKey != null) {
+                               selectionKey.cancel();
+                               selectionKey.channel().close();
+                           }
                        }
 
                     }

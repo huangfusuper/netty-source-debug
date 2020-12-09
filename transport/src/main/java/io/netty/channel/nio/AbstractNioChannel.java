@@ -77,10 +77,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
      */
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
+        //创建关键数据
         super(parent);
+        //保存jdk底层channel
         this.ch = ch;
+        //保存关注的事件
         this.readInterestOp = readInterestOp;
         try {
+            //设置为非阻塞
             ch.configureBlocking(false);
         } catch (IOException e) {
             try {
@@ -372,17 +376,29 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return loop instanceof NioEventLoop;
     }
 
+    /**
+     * 实际的注册方法
+     * @throws Exception
+     */
     @Override
     protected void doRegister() throws Exception {
         boolean selected = false;
         for (;;) {
             try {
+                //调用jdk底层的注册选择器的方法
+                //等同于 NIO的serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT); this代表保存的对象  后续在管道的其他地方也能获取到 相当于一个上下文
+                //OP_READ： 1
+                //OP_WRITE： 4
+                //OP_CONNECT：8
+                //OP_ACCEPT：16
+                //0 是一个典型的非法输入 这里0并不会被判断为非法  但是也没有任何的用处  主要就是做一个占位符的处理后续在进行修改就OK  就离谱
+                //0表示对这个channel的任何事件都不感兴趣，这样会导致永远select不到这个channel。
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
-                    // Force the Selector to select now as the "canceled" SelectionKey may still be
-                    // cached and not removed because no Select.select(..) operation was called yet.
+                    // 强制选择器立即选择，因为“取消”的SelectionKey可能仍然是
+                    // 已被缓存且未删除，因为尚未调用Select.select（..）操作。
                     eventLoop().selectNow();
                     selected = true;
                 } else {
@@ -408,9 +424,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         readPending = true;
-
+        //0   readInterestOp = 16
         final int interestOps = selectionKey.interestOps();
         if ((interestOps & readInterestOp) == 0) {
+            //关注一个 readInterestOp 事件  Acc事件
             selectionKey.interestOps(interestOps | readInterestOp);
         }
     }
