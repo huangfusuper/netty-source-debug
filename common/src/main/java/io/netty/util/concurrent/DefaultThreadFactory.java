@@ -61,12 +61,13 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public DefaultThreadFactory(Class<?> poolType, boolean daemon, int priority) {
+        //线程的命名规则生成
         this(toPoolName(poolType), daemon, priority);
     }
 
     public static String toPoolName(Class<?> poolType) {
         ObjectUtil.checkNotNull(poolType, "poolType");
-
+        //获取这个类的简单类名
         String poolName = StringUtil.simpleClassName(poolType);
         switch (poolName.length()) {
             case 0:
@@ -74,7 +75,9 @@ public class DefaultThreadFactory implements ThreadFactory {
             case 1:
                 return poolName.toLowerCase(Locale.US);
             default:
+                //首字母是大写的  第二个字母是小写的
                 if (Character.isUpperCase(poolName.charAt(0)) && Character.isLowerCase(poolName.charAt(1))) {
+                    //将第一个字符转换为小写 这里就是将类名首字母转换Wie小写了
                     return Character.toLowerCase(poolName.charAt(0)) + poolName.substring(1);
                 } else {
                     return poolName;
@@ -89,9 +92,11 @@ public class DefaultThreadFactory implements ThreadFactory {
             throw new IllegalArgumentException(
                     "priority: " + priority + " (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)");
         }
-
+        //上一步转换的   首字母小写的名字 - 自增操作 -
         prefix = poolName + '-' + poolId.incrementAndGet() + '-';
+        //守护线程
         this.daemon = daemon;
+        //分配给线程的优先级
         this.priority = priority;
         this.threadGroup = threadGroup;
     }
@@ -103,6 +108,7 @@ public class DefaultThreadFactory implements ThreadFactory {
 
     @Override
     public Thread newThread(Runnable r) {
+        //创建一个线程 每次执行任务的时候都会创建一个线程实体
         Thread t = newThread(FastThreadLocalRunnable.wrap(r), prefix + nextId.incrementAndGet());
         try {
             if (t.isDaemon() != daemon) {
@@ -119,6 +125,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     protected Thread newThread(Runnable r, String name) {
+        //Netty自己封装的线程
         return new FastThreadLocalThread(threadGroup, r, name);
     }
 }
