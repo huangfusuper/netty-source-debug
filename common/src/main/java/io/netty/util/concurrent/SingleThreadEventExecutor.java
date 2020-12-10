@@ -163,11 +163,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor,
                                         boolean addTaskWakesUp, Queue<Runnable> taskQueue,
-                                        RejectedExecutionHandler rejectedHandler) {
+                                          RejectedExecutionHandler rejectedHandler) {
         super(parent);
         this.addTaskWakesUp = addTaskWakesUp;
         this.maxPendingTasks = DEFAULT_MAX_PENDING_EXECUTOR_TASKS;
+        //保存线程执行器
         this.executor = ThreadExecutorMap.apply(executor, this);
+        //创建一个队列 Mpscq，外部线程执行的时候使用这个队列（不是在EventLoop的线程内执行的时候）  newTaskQueue(queueFactory)
         this.taskQueue = ObjectUtil.checkNotNull(taskQueue, "taskQueue");
         this.rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
     }

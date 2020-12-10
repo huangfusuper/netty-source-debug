@@ -32,9 +32,11 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
     @SuppressWarnings("unchecked")
     @Override
     public EventExecutorChooser newChooser(EventExecutor[] executors) {
+        //判断2的幂 isPowerOfTwo
         if (isPowerOfTwo(executors.length)) {
             return new PowerOfTwoEventExecutorChooser(executors);
         } else {
+            //简单的
             return new GenericEventExecutorChooser(executors);
         }
     }
@@ -53,6 +55,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
         @Override
         public EventExecutor next() {
+            //2的幂等性  实现这个  也能实现循环取数的
             return executors[idx.getAndIncrement() & executors.length - 1];
         }
     }
@@ -67,6 +70,8 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
         @Override
         public EventExecutor next() {
+            //自增  取模   以达到循环的目的
+            //假设executors 长度为5  那么 不断的循环就会不断的得到 0 1 2 3 4  0 1 2 3 4。。。
             return executors[Math.abs(idx.getAndIncrement() % executors.length)];
         }
     }

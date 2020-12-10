@@ -74,6 +74,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         //创建一个线程执行器
         //newDefaultThreadFactory  构建线程工厂
         if (executor == null) {
+            //创建并保存线程执行器
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
@@ -82,6 +83,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
+                //创建执行器
                 children[i] = newChild(executor, args);
                 success = true;
             } catch (Exception e) {
@@ -108,7 +110,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                 }
             }
         }
-
+        //创建一个选择器
         chooser = chooserFactory.newChooser(children);
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
