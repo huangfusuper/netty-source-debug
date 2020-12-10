@@ -445,22 +445,27 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             try {
                 int strategy;
                 try {
+                    //计算策略
                     strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                     switch (strategy) {
                     case SelectStrategy.CONTINUE:
                         continue;
 
                     case SelectStrategy.BUSY_WAIT:
-                        // fall-through to SELECT since the busy-wait is not supported with NIO
+                        // NIO不支持繁忙等待，因此无法进入SELECT
 
                     case SelectStrategy.SELECT:
+                        //下一个计划任务截止日期  当前队列的第一个的最大执行时间 查看是否超时
                         long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
                         if (curDeadlineNanos == -1L) {
-                            curDeadlineNanos = NONE; // nothing on the calendar
+                            // 日历上没有
+                            curDeadlineNanos = NONE;
                         }
                         nextWakeupNanos.set(curDeadlineNanos);
                         try {
+                            //有任务  任务队列不为空
                             if (!hasTasks()) {
+                                //选择
                                 strategy = select(curDeadlineNanos);
                             }
                         } finally {
@@ -487,11 +492,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 boolean ranTasks;
                 if (ioRatio == 100) {
                     try {
+                        //当有准备好的IO事件了
                         if (strategy > 0) {
                             processSelectedKeys();
                         }
                     } finally {
-                        // Ensure we always run tasks.
+                        // 确保我们始终运行任务。
                         ranTasks = runAllTasks();
                     }
                 } else if (strategy > 0) {
@@ -580,8 +586,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private void processSelectedKeys() {
         if (selectedKeys != null) {
+            //处理选定的键优化
             processSelectedKeysOptimized();
         } else {
+            //处理所选按键
             processSelectedKeysPlain(selector.selectedKeys());
         }
     }
@@ -805,6 +813,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         return selector.selectNow();
     }
 
+    /**
+     * 返回追备好的IO事件
+     * @param deadlineNanos
+     * @return
+     * @throws IOException
+     */
     private int select(long deadlineNanos) throws IOException {
         if (deadlineNanos == NONE) {
             return selector.select();
