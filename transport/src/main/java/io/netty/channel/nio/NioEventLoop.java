@@ -432,6 +432,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     * 实际的启动
+     * 轮询事件
+     * 处理事件
+     * 执行任务
+     */
     @Override
     protected void run() {
         int selectCnt = 0;

@@ -357,14 +357,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                if (regFuture.isSuccess()) {
-                    channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-                } else {
-                    promise.setFailure(regFuture.cause());
-                }
+        channel.eventLoop().execute(() -> {
+            if (regFuture.isSuccess()) {
+                channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            } else {
+                promise.setFailure(regFuture.cause());
             }
         });
     }

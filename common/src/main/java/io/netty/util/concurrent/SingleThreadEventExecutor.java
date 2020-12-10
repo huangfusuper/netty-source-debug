@@ -558,6 +558,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    /**
+     * 直接对比是否相等
+     * @param thread
+     * @return
+     */
     @Override
     public boolean inEventLoop(Thread thread) {
         return thread == this.thread;
@@ -826,9 +831,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private void execute(Runnable task, boolean immediate) {
+        //判断当前执行的线程是不是 NIoEventLoopGroup的线程  这里是false
         boolean inEventLoop = inEventLoop();
         addTask(task);
         if (!inEventLoop) {
+            //启动线程
             startThread();
             if (isShutdown()) {
                 boolean reject = false;
@@ -941,11 +948,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
 
+    /**
+     * 启动线程
+     */
     private void startThread() {
+        /**
+         * 当前线程是否没有启动
+         */
         if (state == ST_NOT_STARTED) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 boolean success = false;
                 try {
+                    //启动线程
                     doStartThread();
                     success = true;
                 } finally {
@@ -977,9 +991,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void doStartThread() {
         assert thread == null;
+        //创建一条线程并启动
         executor.execute(new Runnable() {
             @Override
             public void run() {
+                //保存当前线程
                 thread = Thread.currentThread();
                 if (interrupted) {
                     thread.interrupt();
@@ -988,6 +1004,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 boolean success = false;
                 updateLastExecutionTime();
                 try {
+                    //进行实际的启动
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {
