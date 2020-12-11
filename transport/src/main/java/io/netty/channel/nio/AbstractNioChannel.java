@@ -361,7 +361,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         @Override
         public final void forceFlush() {
-            // directly call super.flush0() to force a flush now
+            // 直接调用super.flush0（）立即强制刷新
             super.flush0();
         }
 
