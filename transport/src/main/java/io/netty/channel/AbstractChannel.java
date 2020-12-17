@@ -69,9 +69,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      *        the parent of this channel. {@code null} if there's no parent.
      */
     protected AbstractChannel(Channel parent) {
+        //保存channel
         this.parent = parent;
+        //channel的唯一标识
         id = newId();
+        //jdk底层操作读写的类
         unsafe = newUnsafe();
+        //管道
         pipeline = newChannelPipeline();
     }
 
@@ -245,6 +249,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        //this.bind
         return pipeline.bind(localAddress, promise);
     }
 
@@ -449,6 +454,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return remoteAddress0();
         }
 
+        /**
+         * 注册selector
+         * @param eventLoop 事件循环
+         * @param promise promise
+         */
         @Override
         public final void register(EventLoop eventLoop, final ChannelPromise promise) {
             ObjectUtil.checkNotNull(eventLoop, "eventLoop");
@@ -461,10 +471,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName()));
                 return;
             }
-
+            //赋值操作  后续所有的IO处理都交给这个 eventLoop
             AbstractChannel.this.eventLoop = eventLoop;
 
             if (eventLoop.inEventLoop()) {
+                //实际的注册 注册selector 触发 handlerAdded事件和 channelRegistered事件
                 register0(promise);
             } else {
                 try {
@@ -487,43 +498,53 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private void register0(ChannelPromise promise) {
             try {
-                // check if the channel is still open as it could be closed in the mean time when the register
-                // call was outside of the eventLoop
+                // 检查通道是否仍处于打开状态，因为与此同时寄存器可能关闭
+                // 呼叫不在eventLoop之外
                 if (!promise.setUncancellable() || !ensureOpen(promise)) {
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
+                //实际的注册  调用jdk底层的数据注册selector
                 doRegister();
                 neverRegistered = false;
                 registered = true;
 
-                // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
-                // user may already fire events through the pipeline in the ChannelFutureListener.
+                // 确保在我们实际通知诺言之前调用handlerHandlered（...）。这是需要的
+                //用户可能已经通过ChannelFutureListener中的管道触发事件。
+                //通知管道  传播handlerAdded事件
                 pipeline.invokeHandlerAddedIfNeeded();
 
                 safeSetSuccess(promise);
+                //通知管道  传播channelRegistered事件
                 pipeline.fireChannelRegistered();
-                // Only fire a channelActive if the channel has never been registered. This prevents firing
-                // multiple channel actives if the channel is deregistered and re-registered.
+                // 如果从未注册过频道，则仅触发channelActive。这样可以防止开火
+                // 如果取消注册并重新注册通道，则多个通道处于活动状态。
+                //isActive() 返回false
                 if (isActive()) {
                     if (firstRegistration) {
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
-                        // This channel was registered before and autoRead() is set. This means we need to begin read
-                        // again so that we process inbound data.
+                        // 该通道已注册，并已设置autoRead（）。这意味着我们需要开始阅读
+                        // 再次，以便我们处理入站数据。
                         //
                         // See https://github.com/netty/netty/issues/4805
+                        //开始读事件
                         beginRead();
                     }
                 }
             } catch (Throwable t) {
-                // Close the channel directly to avoid FD leak.
+                // 直接关闭通道以避免FD泄漏。
                 closeForcibly();
                 closeFuture.setClosed();
                 safeSetFailure(promise, t);
             }
         }
 
+        /**
+         * 绑定操作
+         * @param localAddress
+         * @param promise
+         */
         @Override
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
             assertEventLoop();
@@ -544,17 +565,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         "is not bound to a wildcard address; binding to a non-wildcard " +
                         "address (" + localAddress + ") anyway as requested.");
             }
-
+            //false
             boolean wasActive = isActive();
             try {
+                //jdk底层的绑定端口   NioServerSocketChannel
                 doBind(localAddress);
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
                 closeIfClosed();
                 return;
             }
-
+            //isActive true
             if (!wasActive && isActive()) {
+                //触发 Active事件
                 invokeLater(new Runnable() {
                     @Override
                     public void run() {

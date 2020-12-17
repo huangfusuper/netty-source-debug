@@ -120,11 +120,17 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return this;
     }
 
+    /**
+     * 初始化服务端channel
+     * @param channel 服务端管道
+     */
     @Override
     void init(Channel channel) {
+        //向上一步 初始化channel初始化完成的conf对象设置 childOption ，childOption是在buildServerBootStr的时候传入的 .childOption
         setChannelOptions(channel, options0().entrySet().toArray(EMPTY_OPTION_ARRAY), logger);
+        //向上一步 初始化channel初始化完成的conf对象设置 childAttr ，childAttr是在buildServerBootStr的时候传入的 .childAttr
         setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
-
+        //拿到管道
         ChannelPipeline p = channel.pipeline();
 
         final EventLoopGroup currentChildGroup = childGroup;
@@ -137,6 +143,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             @Override
             public void initChannel(final Channel ch) {
                 final ChannelPipeline pipeline = ch.pipeline();
+                //将用户自定义的handler添加进管道  handler 是在构建ServerBootStr的时候传入的  handler
                 ChannelHandler handler = config.handler();
                 if (handler != null) {
                     pipeline.addLast(handler);
@@ -145,6 +152,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
+                        //添加一个特殊的处理器  默认的
+                        //将用户自己定义的值保存到 ServerBootstrapAcceptor 处理新连接接入
+                        //如果新连接接入就会用这个绑定到线程上
                         pipeline.addLast(new ServerBootstrapAcceptor(
                                 ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
                     }

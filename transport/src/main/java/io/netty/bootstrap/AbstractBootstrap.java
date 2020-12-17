@@ -274,8 +274,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
 
         if (regFuture.isDone()) {
-            // At this point we know that the registration was complete and successful.
+            // 至此，我们知道注册已完成且成功。
             ChannelPromise promise = channel.newPromise();
+            //进行数据绑定  通道的注册 以及事件的触发
             doBind0(regFuture, channel, localAddress, promise);
             return promise;
         } else {
@@ -309,8 +310,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
-            //创建服务端的channel
+            //创建服务端的channel  反射创建
             channel = channelFactory.newChannel();
+            //初始化channel
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {
@@ -322,7 +324,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
-
+        /**
+         * 注册selecrot  最终调动的还是jdk的  NioEventLoopGroup  -> parent[MultithreadEventLoopGroup]
+         * @see io.netty.channel.AbstractChannel.AbstractUnsafe.register
+         */
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {
@@ -352,14 +357,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                if (regFuture.isSuccess()) {
-                    channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-                } else {
-                    promise.setFailure(regFuture.cause());
-                }
+        channel.eventLoop().execute(() -> {
+            if (regFuture.isSuccess()) {
+                channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            } else {
+                promise.setFailure(regFuture.cause());
             }
         });
     }

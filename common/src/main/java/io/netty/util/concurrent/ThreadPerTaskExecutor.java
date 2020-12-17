@@ -27,6 +27,12 @@ public final class ThreadPerTaskExecutor implements Executor {
         this.threadFactory = ObjectUtil.checkNotNull(threadFactory, "threadFactory");
     }
 
+    /**
+     * io.netty.util.concurrent.DefaultThreadFactory#newThread(java.lang.Runnable)
+     *
+     * 执行任务  每次执行任务都会创建一个线程实体对象
+     * @param command 线程
+     */
     @Override
     public void execute(Runnable command) {
         threadFactory.newThread(command).start();

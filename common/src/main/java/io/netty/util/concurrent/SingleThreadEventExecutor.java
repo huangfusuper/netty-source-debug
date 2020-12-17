@@ -163,11 +163,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor,
                                         boolean addTaskWakesUp, Queue<Runnable> taskQueue,
-                                        RejectedExecutionHandler rejectedHandler) {
+                                          RejectedExecutionHandler rejectedHandler) {
         super(parent);
         this.addTaskWakesUp = addTaskWakesUp;
         this.maxPendingTasks = DEFAULT_MAX_PENDING_EXECUTOR_TASKS;
+        //保存线程执行器
         this.executor = ThreadExecutorMap.apply(executor, this);
+        //创建一个队列 Mpscq，外部线程执行的时候使用这个队列（不是在EventLoop的线程内执行的时候）  newTaskQueue(queueFactory)
         this.taskQueue = ObjectUtil.checkNotNull(taskQueue, "taskQueue");
         this.rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
     }
@@ -556,6 +558,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    /**
+     * 直接对比是否相等
+     * @param thread
+     * @return
+     */
     @Override
     public boolean inEventLoop(Thread thread) {
         return thread == this.thread;
@@ -824,9 +831,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private void execute(Runnable task, boolean immediate) {
+        //判断当前执行的线程是不是 NIoEventLoopGroup的线程  这里是false
         boolean inEventLoop = inEventLoop();
+        //将线程加入到队列
         addTask(task);
         if (!inEventLoop) {
+            //启动线程
             startThread();
             if (isShutdown()) {
                 boolean reject = false;
@@ -939,11 +949,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
 
+    /**
+     * 启动线程
+     */
     private void startThread() {
+        /**
+         * 当前线程是否没有启动
+         */
         if (state == ST_NOT_STARTED) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 boolean success = false;
                 try {
+                    //启动线程
                     doStartThread();
                     success = true;
                 } finally {
@@ -975,17 +992,21 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void doStartThread() {
         assert thread == null;
+        //创建一条线程并启动
         executor.execute(new Runnable() {
             @Override
             public void run() {
+                //保存当前线程
                 thread = Thread.currentThread();
                 if (interrupted) {
                     thread.interrupt();
                 }
 
                 boolean success = false;
+                //更新上次执行时间
                 updateLastExecutionTime();
                 try {
+                    //进行实际的启动
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {
@@ -999,7 +1020,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                         }
                     }
 
-                    // Check if confirmShutdown() was called at the end of the loop.
+                    // 检查是否在循环结束时调用了confirmShutdown（）。
                     if (success && gracefulShutdownStartTime == 0) {
                         if (logger.isErrorEnabled()) {
                             logger.error("Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
@@ -1009,17 +1030,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     }
 
                     try {
-                        // Run all remaining tasks and shutdown hooks. At this point the event loop
-                        // is in ST_SHUTTING_DOWN state still accepting tasks which is needed for
-                        // graceful shutdown with quietPeriod.
+                        // 运行所有剩余的任务和关闭挂钩。此时事件循环
+                        // 处于ST_SHUTTING_DOWN状态，仍在接受任务
+                        // 使用quietPeriod正常关闭。
                         for (;;) {
                             if (confirmShutdown()) {
                                 break;
                             }
                         }
 
-                        // Now we want to make sure no more tasks can be added from this point. This is
-                        // achieved by switching the state. Any new tasks beyond this point will be rejected.
+                        // 现在，我们要确保从这一点开始不能再添加更多任务。这是
+                        // 通过切换状态来实现。超过此时间点的任何新任务将被拒绝。
                         for (;;) {
                             int oldState = state;
                             if (oldState >= ST_SHUTDOWN || STATE_UPDATER.compareAndSet(
@@ -1028,8 +1049,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             }
                         }
 
-                        // We have the final set of tasks in the queue now, no more can be added, run all remaining.
-                        // No need to loop here, this is the final pass.
+                        // 现在，队列中有最后一组任务，无法添加，继续运行所有剩余的任务。
+                        // 无需在此处循环，这是最后一步。
                         confirmShutdown();
                     } finally {
                         try {
