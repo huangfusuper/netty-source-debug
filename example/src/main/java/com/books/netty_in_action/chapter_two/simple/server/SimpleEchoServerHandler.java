@@ -10,6 +10,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.TimeUnit;
 
 /**
  * *********************************************************************
@@ -23,6 +24,8 @@ import java.time.format.DateTimeFormatter;
 public class SimpleEchoServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        //周期调度
+        ctx.executor().scheduleAtFixedRate(()-> System.out.println("123"),0,10, TimeUnit.SECONDS);
         if (msg instanceof ByteBuf) {
             ByteBuf byteBuf = (ByteBuf) msg;
             String byteBufStr = byteBuf.toString(StandardCharsets.UTF_8);
