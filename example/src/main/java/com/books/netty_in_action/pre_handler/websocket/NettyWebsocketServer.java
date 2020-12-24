@@ -13,6 +13,9 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleStateHandler;
+
+import java.util.concurrent.TimeUnit;
 
 public class NettyWebsocketServer {
 
@@ -30,6 +33,7 @@ public class NettyWebsocketServer {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast(new IdleStateHandler(0, 0,3, TimeUnit.SECONDS));
                         pipeline.addLast(new HttpServerCodec());
                         //为握手提供消息聚合
                         pipeline.addLast(new HttpObjectAggregator(65536));
