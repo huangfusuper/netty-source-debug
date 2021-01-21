@@ -65,6 +65,11 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
              *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
              *
              *  很简单  调用jdk底层提供的方法创建一个channel
+             *  SelectorProvider 是 JDK NIO 中的抽象类实现，通过 openServerSocketChannel()
+             *  方法可以用于创建服务端的 ServerSocketChannel。
+             *  而且 SelectorProvider 会根据操作系统类型和版本的不同，返回不同的实现类
+             *
+             *  参考：DefaultSelectorProvider
              */
             return provider.openServerSocketChannel();
         } catch (IOException e) {

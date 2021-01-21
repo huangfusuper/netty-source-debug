@@ -54,13 +54,30 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     static final Map.Entry<ChannelOption<?>, Object>[] EMPTY_OPTION_ARRAY = new Map.Entry[0];
     @SuppressWarnings("unchecked")
     static final Map.Entry<AttributeKey<?>, Object>[] EMPTY_ATTRIBUTE_ARRAY = new Map.Entry[0];
-
+    /**
+     * 保存的是父类的group boss
+     */
     volatile EventLoopGroup group;
+    /**
+     * 构建channel的工厂  channel() 绑定
+     */
     @SuppressWarnings("deprecation")
     private volatile ChannelFactory<? extends C> channelFactory;
+    /**
+     * 由 localAddress() 绑定
+     */
     private volatile SocketAddress localAddress;
+    /**
+     *  option() 绑定
+     */
     private final Map<ChannelOption<?>, Object> options = new ConcurrentHashMap<ChannelOption<?>, Object>();
+    /**
+     * attrs()绑定
+     */
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
+    /**
+     * handler()绑定
+     */
     private volatile ChannelHandler handler;
 
     AbstractBootstrap() {
@@ -267,12 +284,16 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     private ChannelFuture doBind(final SocketAddress localAddress) {
         //创建服务端的channel
+        //初始化并注册 Channel，同时返回一个 ChannelFuture 实例 regFuture  异步
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
+        //通过 regFuture.cause() 方法判断 initAndRegister() 的过程是否发生异常，如果发生异常则直接返回。
         if (regFuture.cause() != null) {
             return regFuture;
         }
-
+        //regFuture.isDone() 表示 initAndRegister() 是否执行完毕，如果执行完毕则调用 doBind0() 进行 Socket 绑定。
+        // 如果 initAndRegister() 还没有执行结束，regFuture 会添加一个 ChannelFutureListener 回调监听，当 initAndRegister()
+        // 执行结束后会调用 operationComplete()，同样通过 doBind0() 进行端口绑定。
         if (regFuture.isDone()) {
             // 至此，我们知道注册已完成且成功。
             ChannelPromise promise = channel.newPromise();
@@ -311,6 +332,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         Channel channel = null;
         try {
             //创建服务端的channel  反射创建
+            //io.netty.channel.ReflectiveChannelFactory.newChannel
             channel = channelFactory.newChannel();
             //初始化channel
             init(channel);

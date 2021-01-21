@@ -44,8 +44,13 @@ import java.util.concurrent.TimeUnit;
 public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerChannel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
-
+    /**
+     * childOptions()绑定
+     */
     private final Map<ChannelOption<?>, Object> childOptions = new ConcurrentHashMap<ChannelOption<?>, Object>();
+    /**
+     * childAttrs() 绑定
+     */
     private final Map<AttributeKey<?>, Object> childAttrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
     /**
@@ -133,6 +138,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      */
     @Override
     void init(Channel channel) {
+        //设置 Socket 参数以及用户自定义属性。
+        // 在创建服务端 Channel 时，Channel 的配置参数保存在 NioServerSocketChannelConfig 中，在
+        // 初始化 Channel 的过程中，Netty 会将这些参数设置到 JDK 底层的 Socket 上，并把用户自定义的属性绑定在 Channel 上。
         //向上一步 初始化channel初始化完成的conf对象设置 childOption ，childOption是在buildServerBootStr的时候传入的 .childOption
         setChannelOptions(channel, options0().entrySet().toArray(EMPTY_OPTION_ARRAY), logger);
         //向上一步 初始化channel初始化完成的conf对象设置 childAttr ，childAttr是在buildServerBootStr的时候传入的 .childAttr
@@ -146,6 +154,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 childOptions.entrySet().toArray(EMPTY_OPTION_ARRAY);
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
 
+        /**
+         * 添加特殊的 Handler 处理器。首先 ServerBootstrap 为 Pipeline 添加了一个 ChannelInitializer，
+         * ChannelInitializer 是实现了 ChannelHandler 接口的匿名类，其中 ChannelInitializer 实现的 initChannel()
+         * 方法用于添加 ServerSocketChannel 对应的 Handler。
+         * 然后 Netty 通过异步 task 的方式又向 Pipeline 一个处理器 ServerBootstrapAcceptor，
+         * 从 ServerBootstrapAcceptor 的命名可以看出，这是一个连接接入器，专门用于接收新的连接，然后把事件分发给 EventLoop 执行
+         */
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(final Channel ch) {
@@ -156,12 +171,16 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                     pipeline.addLast(handler);
                 }
 
+                //异步执行，为什么呢？
+                //因为我们在初始化时，还没有将 Channel 注册到 Selector 对象上，所以还无法注册 Accept 事件到 Selector 上，
+                // 所以事先添加了 ChannelInitializer 处理器，等待 Channel 注册完成后，再向 Pipeline 中添加 ServerBootstrapAcceptor 处理器。
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
                         //添加一个特殊的处理器  默认的
                         //将用户自己定义的值保存到 ServerBootstrapAcceptor 处理新连接接入
                         //如果新连接接入就会用这个绑定到线程上
+                        //连接接入器，专门用于接收新的连接，然后把事件分发给 EventLoop 执行
                         pipeline.addLast(new ServerBootstrapAcceptor(
                                 ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
                     }

@@ -64,6 +64,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Creates a new instance.
+     * 首先调用 AbstractChannel 的构造函数创建了三个重要的成员变量，
+     * 分别为 id、unsafe、pipeline。
+     * id 表示全局唯一的 Channel，
+     * unsafe 用于操作底层数据的读写操作，
+     * pipeline 负责业务处理器的编排。
      *
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
@@ -74,8 +79,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         //channel的唯一标识
         id = newId();
         //jdk底层操作读写的类
+        //unsafe 操作底层读写
         unsafe = newUnsafe();
-        //管道
+        //管道 pipeline 负责业务处理器编排
         pipeline = newChannelPipeline();
     }
 
