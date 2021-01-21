@@ -48,6 +48,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     private final Map<ChannelOption<?>, Object> childOptions = new ConcurrentHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> childAttrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
+    /**
+     * 子类的group也就是常说的work组，父类有父group 也就是常说的boss
+     *
+     * 代码:bootstrap.group(boss,work)
+     * boss被绑定在了父类的group属性
+     * work被绑定在本类的childGroup属性
+     */
     private volatile EventLoopGroup childGroup;
     private volatile ChannelHandler childHandler;
 
