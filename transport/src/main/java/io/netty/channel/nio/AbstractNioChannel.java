@@ -393,6 +393,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 //OP_ACCEPT：16
                 //0 是一个典型的非法输入 这里0并不会被判断为非法  但是也没有任何的用处  主要就是做一个占位符的处理后续在进行修改就OK  就离谱
                 //0表示对这个channel的任何事件都不感兴趣，这样会导致永远select不到这个channel。
+                //// 调用 JDK 底层的 register() 进行注册
+                //register() 的第三个入参传入的是 Netty 自己实现的 Channel 对象，
+                // 调用 register() 方法会将它绑定在 JDK 底层 Channel 的 attachment 上。
+                // 这样在每次 Selector 对象进行事件循环时，Netty 都可以从返回的 JDK 底层 Channel 中获得自己的 Channel 对象。
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {

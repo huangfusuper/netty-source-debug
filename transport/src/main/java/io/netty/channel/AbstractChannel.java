@@ -479,11 +479,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
             //赋值操作  后续所有的IO处理都交给这个 eventLoop
             AbstractChannel.this.eventLoop = eventLoop;
-
+            // Reactor 线程内部调用  判断该当前的线程与事件线程是否一致  channel会与Thread绑定  这里判断的是当前的线程与绑定的线程是否一致
             if (eventLoop.inEventLoop()) {
                 //实际的注册 注册selector 触发 handlerAdded事件和 channelRegistered事件
                 register0(promise);
             } else {
+                // 外部线程调用
                 try {
                     eventLoop.execute(new Runnable() {
                         @Override
@@ -502,6 +503,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
+        /**
+         * 调用 JDK 底层进行 Channel 注册、
+         * 触发 handlerAdded 事件、
+         * 触发 channelRegistered 事件、
+         * Channel 当前状态为活跃时，触发 channelActive 事件。
+         * @param promise
+         */
         private void register0(ChannelPromise promise) {
             try {
                 // 检查通道是否仍处于打开状态，因为与此同时寄存器可能关闭
@@ -511,6 +519,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
                 boolean firstRegistration = neverRegistered;
                 //实际的注册  调用jdk底层的数据注册selector
+                // 调用 JDK 底层的 register() 进行注册
                 doRegister();
                 neverRegistered = false;
                 registered = true;
@@ -518,16 +527,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // 确保在我们实际通知诺言之前调用handlerHandlered（...）。这是需要的
                 //用户可能已经通过ChannelFutureListener中的管道触发事件。
                 //通知管道  传播handlerAdded事件
+                // 触发 handlerAdded 事件
                 pipeline.invokeHandlerAddedIfNeeded();
 
                 safeSetSuccess(promise);
                 //通知管道  传播channelRegistered事件
+                // 触发 channelRegistered 事件
                 pipeline.fireChannelRegistered();
                 // 如果从未注册过频道，则仅触发channelActive。这样可以防止开火
                 // 如果取消注册并重新注册通道，则多个通道处于活动状态。
                 //isActive() 返回false
+                // 此时 Channel 还未注册绑定地址，所以处于非活跃状态
                 if (isActive()) {
                     if (firstRegistration) {
+                        //Channel 当前状态为活跃时，触发 channelActive 事件
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
                         // 该通道已注册，并已设置autoRead（）。这意味着我们需要开始阅读

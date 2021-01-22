@@ -109,6 +109,8 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             // The good thing about calling initChannel(...) in handlerAdded(...) is that there will be no ordering
             // surprises if a ChannelInitializer will add another ChannelInitializer. This is as all handlers
             // will be added in the expected order.
+            //可以看出 ChannelInitializer 首先会调用 initChannel() 抽象方法，
+            // 然后 Netty 会把 ChannelInitializer 自身从 Pipeline 移出。
             if (initChannel(ctx)) {
 
                 // We are done with init the Channel, removing the initializer now.
@@ -126,6 +128,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     private boolean initChannel(ChannelHandlerContext ctx) throws Exception {
         if (initMap.add(ctx)) { // Guard against re-entrance.
             try {
+                // 调用 ChannelInitializer 实现的 initChannel() 方法
                 initChannel((C) ctx.channel());
             } catch (Throwable cause) {
                 // Explicitly call exceptionCaught(...) as we removed the handler before calling initChannel(...).
@@ -134,6 +137,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             } finally {
                 ChannelPipeline pipeline = ctx.pipeline();
                 if (pipeline.context(this) != null) {
+                    // 将 ChannelInitializer 自身从 Pipeline 中移出
                     pipeline.remove(this);
                 }
             }
