@@ -72,6 +72,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
+                        //// while 循环不断读取 Buffer 中的数据
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
                             break;
@@ -90,6 +91,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     readPending = false;
+                    //// 传播读取事件
+                    //触发 channelRead 事件传播
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();

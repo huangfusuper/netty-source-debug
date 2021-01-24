@@ -350,6 +350,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
          * 注册selecrot  最终调动的还是jdk的  NioEventLoopGroup  -> parent[MultithreadEventLoopGroup]
          * @see io.netty.channel.AbstractChannel.AbstractUnsafe.register
          */
+        //group  使用的NioEventLoopGroup 是 MultithreadEventLoopGroup 的子类
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {

@@ -146,6 +146,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
+        //Netty 会根据 JDK 版本的不同，分别调用 JDK 底层不同的 bind() 方法。
+        // 我使用的是 JDK8，所以会调用 JDK 原生 Channel 的 bind() 方法。
+        // 执行完 doBind() 之后，服务端 JDK 原生的 Channel 真正已经完成端口绑定了。
         if (PlatformDependent.javaVersion() >= 7) {
             //jdk底层的绑定
             javaChannel().bind(localAddress, config.getBacklog());
@@ -162,10 +165,15 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
+        //Netty 先通过 JDK 底层的 accept() 获取 JDK 原生的 SocketChannel，然后将它封装成 Netty 自己的 NioSocketChannel。
         SocketChannel ch = SocketUtils.accept(javaChannel());
 
         try {
             if (ch != null) {
+                //新建 Netty 的客户端 Channel 的实现原理与上文中我们讲到的创建服务端 Channel 的过程是类似的，
+                // 只是服务端 Channel 的类型是 NioServerSocketChannel，而客户端 Channel 的类型是
+                // NioSocketChannel。NioSocketChannel 的创建同样会完成几件事：
+                // 创建核心成员变量 id、unsafe、pipeline；注册 SelectionKey.OP_READ 事件；设置 Channel 的为非阻塞模式；新建客户端 Channel 的配置。
                 buf.add(new NioSocketChannel(this, ch));
                 return 1;
             }

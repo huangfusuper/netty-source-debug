@@ -645,8 +645,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         assert channel.eventLoop().inEventLoop();
         if (firstRegistration) {
             firstRegistration = false;
-            // We are now registered to the EventLoop. It's time to call the callbacks for the ChannelHandlers,
-            // that were added before the registration was done.
+            // 现在，我们已注册到EventLoop。现在该调用ChannelHandler的回调了，
+            // 在完成注册之前添加的内容。
             callHandlerAddedForAllHandlers();
         }
     }
@@ -1099,16 +1099,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             assert !registered;
 
-            // This Channel itself was registered.
+            // 该频道本身已注册。
             registered = true;
 
             pendingHandlerCallbackHead = this.pendingHandlerCallbackHead;
-            // Null out so it can be GC'ed.
+            // 清空，以便可以进行GC处理。
             this.pendingHandlerCallbackHead = null;
         }
 
-        // This must happen outside of the synchronized(...) block as otherwise handlerAdded(...) may be called while
-        // holding the lock and so produce a deadlock if handlerAdded(...) will try to add another handler from outside
+        // 这必须发生在synced（...）块之外，否则可能会在调用handlerAdded（...）的同时
+        // 持有锁，因此如果handlerAdded（...）将尝试从外部添加另一个处理程序，则会产生死锁
         // the EventLoop.
         PendingHandlerCallback task = pendingHandlerCallbackHead;
         while (task != null) {

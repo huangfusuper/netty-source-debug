@@ -480,6 +480,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             //赋值操作  后续所有的IO处理都交给这个 eventLoop
             AbstractChannel.this.eventLoop = eventLoop;
             // Reactor 线程内部调用  判断该当前的线程与事件线程是否一致  channel会与Thread绑定  这里判断的是当前的线程与绑定的线程是否一致
+            //注意此时的thread = null 所以返回false
             if (eventLoop.inEventLoop()) {
                 //实际的注册 注册selector 触发 handlerAdded事件和 channelRegistered事件
                 register0(promise);
@@ -489,6 +490,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
+                            //真正的注册方法
                             register0(promise);
                         }
                     });
@@ -520,6 +522,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 boolean firstRegistration = neverRegistered;
                 //实际的注册  调用jdk底层的数据注册selector
                 // 调用 JDK 底层的 register() 进行注册
+                //io.netty.channel.nio.AbstractNioChannel.doRegister
                 doRegister();
                 neverRegistered = false;
                 registered = true;
@@ -527,7 +530,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // 确保在我们实际通知诺言之前调用handlerHandlered（...）。这是需要的
                 //用户可能已经通过ChannelFutureListener中的管道触发事件。
                 //通知管道  传播handlerAdded事件
-                // 触发 handlerAdded 事件
+                // 触发 handlerAdded 事件 触发任务 add事件  将LoggingHandler 添加进对应的管道流集合内部
                 pipeline.invokeHandlerAddedIfNeeded();
 
                 safeSetSuccess(promise);

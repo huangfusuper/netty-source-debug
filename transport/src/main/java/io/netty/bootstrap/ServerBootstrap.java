@@ -160,6 +160,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
          * 方法用于添加 ServerSocketChannel 对应的 Handler。
          * 然后 Netty 通过异步 task 的方式又向 Pipeline 一个处理器 ServerBootstrapAcceptor，
          * 从 ServerBootstrapAcceptor 的命名可以看出，这是一个连接接入器，专门用于接收新的连接，然后把事件分发给 EventLoop 执行
+         * io.netty.channel.DefaultChannelPipeline#invokeHandlerAddedIfNeeded() 触发
          */
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
@@ -168,22 +169,20 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 //将用户自定义的handler添加进管道  handler 是在构建ServerBootStr的时候传入的  handler
                 ChannelHandler handler = config.handler();
                 if (handler != null) {
+                    //LoggingHandler
                     pipeline.addLast(handler);
                 }
 
                 //异步执行，为什么呢？
                 //因为我们在初始化时，还没有将 Channel 注册到 Selector 对象上，所以还无法注册 Accept 事件到 Selector 上，
                 // 所以事先添加了 ChannelInitializer 处理器，等待 Channel 注册完成后，再向 Pipeline 中添加 ServerBootstrapAcceptor 处理器。
-                ch.eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        //添加一个特殊的处理器  默认的
-                        //将用户自己定义的值保存到 ServerBootstrapAcceptor 处理新连接接入
-                        //如果新连接接入就会用这个绑定到线程上
-                        //连接接入器，专门用于接收新的连接，然后把事件分发给 EventLoop 执行
-                        pipeline.addLast(new ServerBootstrapAcceptor(
-                                ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
-                    }
+                ch.eventLoop().execute(() -> {
+                    //添加一个特殊的处理器  默认的
+                    //将用户自己定义的值保存到 ServerBootstrapAcceptor 处理新连接接入
+                    //如果新连接接入就会用这个绑定到线程上
+                    //连接接入器，专门用于接收新的连接，然后把事件分发给 EventLoop 执行
+                    pipeline.addLast(new ServerBootstrapAcceptor(
+                            ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
                 });
             }
         });
@@ -234,14 +233,18 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            //ServerBootstrapAcceptor 开始就把 msg 强制转换为 Channel。难道不会有其他类型的数据吗？
+            // 因为 ServerBootstrapAcceptor 是服务端 Channel 中一个特殊的处理器，
+            // 而服务端 Channel 的 channelRead 事件只会在新连接接入时触发，所以这里拿到的数据都是客户端新连接。
             final Channel child = (Channel) msg;
-
+            // 在客户端 Channel 中添加 childHandler，childHandler 是用户在启动类中通过 childHandler() 方法指定的
             child.pipeline().addLast(childHandler);
 
             setChannelOptions(child, childOptions, logger);
             setAttributes(child, childAttrs);
 
             try {
+                //// 注册客户端 Channel
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {

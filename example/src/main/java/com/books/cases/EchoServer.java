@@ -31,7 +31,7 @@ public class EchoServer {
                     //配置 Channel 的类型；
                     .channel(NioServerSocketChannel.class)
                     //设置 ServerSocketChannel 对应的 Handler；
-                    .handler(new LoggingHandler(LogLevel.DEBUG))
+                    //handler(new LoggingHandler(LogLevel.DEBUG))
                     //设置网络监听的端口；
                     .localAddress(8080)
                     //设置 SocketChannel 对应的 Handler；
