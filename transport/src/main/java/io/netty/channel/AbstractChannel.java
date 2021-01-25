@@ -255,7 +255,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        //this.bind
+        //this.bind head
         return pipeline.bind(localAddress, promise);
     }
 
