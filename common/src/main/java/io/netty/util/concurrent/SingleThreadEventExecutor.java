@@ -996,7 +996,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                //保存当前线程
+                //保存当前线程  给线程赋值的就是这里
                 thread = Thread.currentThread();
                 if (interrupted) {
                     thread.interrupt();
@@ -1007,6 +1007,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 updateLastExecutionTime();
                 try {
                     //进行实际的启动
+                    //io.netty.channel.nio.NioEventLoop.run
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {

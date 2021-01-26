@@ -74,10 +74,10 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         //创建一个线程执行器
         //newDefaultThreadFactory  构建线程工厂
         if (executor == null) {
-            //创建并保存线程执行器
+            //创建并保存线程执行器  执行器  执行任务的  默认是  DefaultThreadFactory 线程池
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
-
+        //创建执行器数组
         children = new EventExecutor[nThreads];
 
         for (int i = 0; i < nThreads; i ++) {
