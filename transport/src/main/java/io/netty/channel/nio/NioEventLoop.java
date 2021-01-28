@@ -467,9 +467,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         //下一个任务的唤醒时间为
                         nextWakeupNanos.set(curDeadlineNanos);
                         try {
-                            //有任务  任务队列不为空
+                            //有任务  任务队列不为空   优先处理任务 后处理 io事件
                             if (!hasTasks()) {
-                                //选择 返回对应的通道数量
+                                //选择 返回对应的通道数量  这里阻塞
                                 strategy = select(curDeadlineNanos);
                             }
                         } finally {
