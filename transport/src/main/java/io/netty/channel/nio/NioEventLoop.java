@@ -520,6 +520,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     ranTasks = runAllTasks(0);
                 }
 
+                //如果没任务执行  也没有相应的IO事件  我们就认为可能发生了 空轮询BUG 将 selectCnt +1 ,若上述情况没有超过阈值，或没有发生，九江selectCnt重置为0
                 if (ranTasks || strategy > 0) {
                     if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS && logger.isDebugEnabled()) {
                         logger.debug("对于Selector {}，Selector.select（）连续过早返回{}次。",
@@ -527,6 +528,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     }
                     selectCnt = 0;
                     // 意外唤醒（异常情况）
+                    //解决空轮询jdk BUG
                 } else if (unexpectedSelectorWakeup(selectCnt)) {
                     selectCnt = 0;
                 }
@@ -554,7 +556,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    // returns true if selectCnt should be reset
+    /**
+     * 如果应该重置selectCnt，则返回true
+     * 解决空轮询jdk BUG
+     *
+     * @param selectCnt
+     * @return
+     */
     private boolean unexpectedSelectorWakeup(int selectCnt) {
         if (Thread.interrupted()) {
             // Thread was interrupted so reset selected keys and break so we not run into a busy loop.
@@ -571,10 +579,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
         if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                 selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
-            // The selector returned prematurely many times in a row.
-            // Rebuild the selector to work around the problem.
+            // 选择器连续过早返回多次。
+            // 重建选择器以解决此问题。
             logger.warn("Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
                     selectCnt, selector);
+            //重建选择器
             rebuildSelector();
             return true;
         }
@@ -651,7 +660,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 selectAgain();
                 selectedKeys = selector.selectedKeys();
 
-                // Create the iterator again to avoid ConcurrentModificationException
+                // 再次创建迭代器，以避免ConcurrentModificationException
                 if (selectedKeys.isEmpty()) {
                     break;
                 } else {
