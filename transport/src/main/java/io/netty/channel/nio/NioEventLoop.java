@@ -437,11 +437,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     //计算策略
                     strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                     switch (strategy) {
-                        case SelectStrategy.CONTINUE:
-                            continue;
+                    case SelectStrategy.CONTINUE:
+                        continue;
 
-                        case SelectStrategy.BUSY_WAIT:
-                            // NIO不支持繁忙等待，因此无法进入SELECT
+                    case SelectStrategy.BUSY_WAIT:
+                        // NIO不支持繁忙等待，因此无法进入SELECT
 
                         case SelectStrategy.SELECT:
                             //下一个计划任务截止日期  当前队列的第一个的最大执行时间 查看是否超时
@@ -457,7 +457,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                             nextWakeupNanos.set(curDeadlineNanos);
                             try {
                                 //检查是否有任务，有任务就进入select 任务Wie空的话直接跳过select直接执行异步任务
-                                //有任务  任务队列不为空
+                                //有任务  任务队列不为空    优先处理任务 后处理 io事件
                                 //这里是为了优先处理异步任务，当不存在异步任务的时候，Netty会首先进行数据阻塞
                                 //当存在异步任务的时候，Netty会立即执行selectNow来进行一个立即的返回不会进行阻塞，即使没有IO事件
                                 //因为异步任务总是要执行的，异步任务不可能等到select阻塞完毕（有IO事件的时候才会进行执行），所以
@@ -466,7 +466,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                                 //使得selector进行返回进而能够执行异步任务
                                 //2. 如果有异步任务的话 就不进行阻塞或者只阻塞很短的一段的时间进行io时间的返回 后续基于io事件的数量进行操作！
                                 if (!hasTasks()) {
-                                    //选择 返回对应的通道数量
+                                    //选择 返回对应的通道数量  这里阻塞
                                     strategy = select(curDeadlineNanos);
                                 }
                             } finally {
@@ -485,11 +485,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     handleLoopException(e);
                     continue;
                 }
-                //选择通道数量次数 +1
+
                 selectCnt++;
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
-                //默认值为 50
                 final int ioRatio = this.ioRatio;
                 boolean ranTasks;
                 if (ioRatio == 100) {
@@ -519,6 +518,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     ranTasks = runAllTasks(0);
                 }
 
+                //如果没任务执行  也没有相应的IO事件  我们就认为可能发生了 空轮询BUG 将 selectCnt +1 ,若上述情况没有超过阈值，或没有发生，九江selectCnt重置为0
                 if (ranTasks || strategy > 0) {
                     if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS && logger.isDebugEnabled()) {
                         logger.debug("对于Selector {}，Selector.select（）连续过早返回{}次。",
@@ -526,6 +526,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     }
                     selectCnt = 0;
                     // 意外唤醒（异常情况）
+                    //解决空轮询jdk BUG
                 } else if (unexpectedSelectorWakeup(selectCnt)) {
                     selectCnt = 0;
                 }
@@ -553,7 +554,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    // returns true if selectCnt should be reset
+    /**
+     * 如果应该重置selectCnt，则返回true
+     * 解决空轮询jdk BUG
+     *
+     * @param selectCnt
+     * @return
+     */
     private boolean unexpectedSelectorWakeup(int selectCnt) {
         if (Thread.interrupted()) {
             // Thread was interrupted so reset selected keys and break so we not run into a busy loop.
@@ -570,10 +577,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
         if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                 selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
-            // The selector returned prematurely many times in a row.
-            // Rebuild the selector to work around the problem.
+            // 选择器连续过早返回多次。
+            // 重建选择器以解决此问题。
             logger.warn("Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
                     selectCnt, selector);
+            //重建选择器
             rebuildSelector();
             return true;
         }
@@ -650,7 +658,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 selectAgain();
                 selectedKeys = selector.selectedKeys();
 
-                // Create the iterator again to avoid ConcurrentModificationException
+                // 再次创建迭代器，以避免ConcurrentModificationException
                 if (selectedKeys.isEmpty()) {
                     break;
                 } else {
