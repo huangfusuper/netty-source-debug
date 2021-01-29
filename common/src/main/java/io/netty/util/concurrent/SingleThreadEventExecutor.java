@@ -288,7 +288,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 return true;
             }
             if (!taskQueue.offer(scheduledTask)) {
-                // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
+                // 任务队列中没有剩余空间，将其重新添加到ScheduledTaskQueue中，因此我们再次进行拾取。
                 scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
                 return false;
             }
@@ -460,6 +460,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      */
     protected boolean runAllTasks(long timeoutNanos) {
+        //从计划任务队列中获取
         fetchFromScheduledTaskQueue();
         Runnable task = pollTask();
         if (task == null) {

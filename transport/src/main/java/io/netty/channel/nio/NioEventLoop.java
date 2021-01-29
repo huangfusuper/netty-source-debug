@@ -15,13 +15,7 @@
  */
 package io.netty.channel.nio;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopException;
-import io.netty.channel.EventLoopTaskQueueFactory;
-import io.netty.channel.SelectStrategy;
-import io.netty.channel.SingleThreadEventLoop;
+import io.netty.channel.*;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
@@ -35,24 +29,18 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
-
+import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * {@link SingleThreadEventLoop} implementation which register the {@link Channel}'s to a
  * {@link Selector} and so does the multi-plexing of these in the event loop.
- *
  */
 public final class NioEventLoop extends SingleThreadEventLoop {
 
@@ -196,8 +184,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         });
 
         if (!(maybeSelectorImplClass instanceof Class) ||
-            // ensure the current selector implementation is what we can instrument.
-            !((Class<?>) maybeSelectorImplClass).isAssignableFrom(unwrappedSelector.getClass())) {
+                // ensure the current selector implementation is what we can instrument.
+                !((Class<?>) maybeSelectorImplClass).isAssignableFrom(unwrappedSelector.getClass())) {
             if (maybeSelectorImplClass instanceof Throwable) {
                 Throwable t = (Throwable) maybeSelectorImplClass;
                 logger.trace("failed to instrument a special java.util.Set into: {}", unwrappedSelector, t);
@@ -261,7 +249,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         selectedKeys = selectedKeySet;
         logger.trace("instrumented a special java.util.Set into: {}", unwrappedSelector);
         return new SelectorTuple(unwrappedSelector,
-                                 new SelectedSelectionKeySetSelector(unwrappedSelector, selectedKeySet));
+                new SelectedSelectionKeySetSelector(unwrappedSelector, selectedKeySet));
     }
 
     /**
@@ -388,7 +376,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
         // Register all channels to the new Selector.
         int nChannels = 0;
-        for (SelectionKey key: oldSelector.keys()) {
+        for (SelectionKey key : oldSelector.keys()) {
             Object a = key.attachment();
             try {
                 if (!key.isValid() || key.channel().keyFor(newSelectorTuple.unwrappedSelector) != null) {
@@ -402,7 +390,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     // Update SelectionKey
                     ((AbstractNioChannel) a).selectionKey = newKey;
                 }
-                nChannels ++;
+                nChannels++;
             } catch (Exception e) {
                 logger.warn("Failed to re-register a Channel to the new Selector.", e);
                 if (a instanceof AbstractNioChannel) {
@@ -442,50 +430,52 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         int selectCnt = 0;
-        for (;;) {
+        for (; ; ) {
             try {
                 int strategy;
                 try {
                     //计算策略
                     strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                     switch (strategy) {
-                    case SelectStrategy.CONTINUE:
-                        continue;
+                        case SelectStrategy.CONTINUE:
+                            continue;
 
-                    case SelectStrategy.BUSY_WAIT:
-                        // NIO不支持繁忙等待，因此无法进入SELECT
+                        case SelectStrategy.BUSY_WAIT:
+                            // NIO不支持繁忙等待，因此无法进入SELECT
 
-                    case SelectStrategy.SELECT:
-                        //下一个计划任务截止日期  当前队列的第一个的最大执行时间 查看是否超时
-                        //返回值  当队列中存在任务的时候会返回对应任务的截止时间  当队列中不存在任务的时候会返回-1
-                        long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
-                        //-1 代表任务队列中没有对应的任务
-                        if (curDeadlineNanos == -1L) {
-                            // 日历上没有
-                            curDeadlineNanos = NONE;
-                        }
-                        //下一个任务的唤醒时间为
-                        nextWakeupNanos.set(curDeadlineNanos);
-                        try {
-                            //有任务  任务队列不为空
-                            //这里是为了优先处理异步任务，当不存在异步任务的时候，Netty会首先进行数据阻塞
-                            //当存在异步任务的时候，Netty会立即执行selectNow来进行一个立即的返回不会进行阻塞，即使没有IO事件
-                            //因为异步任务总是要执行的，异步任务不可能等到select阻塞完毕（有IO事件的时候才会进行执行），所以
-                            //作者这样写的原因是：如果没有io事件，那么进行select()进行阻塞获取IO事件，当有IO时间的时候直接返回，没有IO事件的时候
-                            //进行阻塞，（阻塞过程中可能会有异步任务添加，每当异步任务添加的时候，Netty都会调用 selector.wakeup();进行阻塞的解除）
-                            //使得selector进行返回进而能够执行异步任务
-                            //2. 如果有异步任务的话 就不进行阻塞或者只阻塞很短的一段的时间进行io时间的返回 后续基于io事件的数量进行操作！
-                            if (!hasTasks()) {
-                                //选择 返回对应的通道数量
-                                strategy = select(curDeadlineNanos);
+                        case SelectStrategy.SELECT:
+                            //下一个计划任务截止日期  当前队列的第一个的最大执行时间 查看是否超时
+                            //返回值  当队列中存在任务的时候会返回对应任务的截止时间  当队列中不存在任务的时候会返回-1
+                            //当存在任务的时候返回队尾任务的截止时间 没有任务就返回-1
+                            long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
+                            //-1 代表任务队列中没有对应的任务
+                            if (curDeadlineNanos == -1L) {
+                                // 日历上没有 当不存在任务的时候将任务的截止时间设置为 Integer.MAX()
+                                curDeadlineNanos = NONE;
                             }
-                        } finally {
-                            // 此更新只是为了帮助阻止不必要的选择器唤醒
-                            // 所以可以使用lazySet（没有竞争条件）
-                            nextWakeupNanos.lazySet(AWAKE);
-                        }
-                        // fall through
-                    default:
+                            //下一个任务的唤醒时间为 将任务的最大截止时间保存到cas变量
+                            nextWakeupNanos.set(curDeadlineNanos);
+                            try {
+                                //检查是否有任务，有任务就进入select 任务Wie空的话直接跳过select直接执行异步任务
+                                //有任务  任务队列不为空
+                                //这里是为了优先处理异步任务，当不存在异步任务的时候，Netty会首先进行数据阻塞
+                                //当存在异步任务的时候，Netty会立即执行selectNow来进行一个立即的返回不会进行阻塞，即使没有IO事件
+                                //因为异步任务总是要执行的，异步任务不可能等到select阻塞完毕（有IO事件的时候才会进行执行），所以
+                                //作者这样写的原因是：如果没有io事件，那么进行select()进行阻塞获取IO事件，当有IO时间的时候直接返回，没有IO事件的时候
+                                //进行阻塞，（阻塞过程中可能会有异步任务添加，每当异步任务添加的时候，Netty都会调用 selector.wakeup();进行阻塞的解除）
+                                //使得selector进行返回进而能够执行异步任务
+                                //2. 如果有异步任务的话 就不进行阻塞或者只阻塞很短的一段的时间进行io时间的返回 后续基于io事件的数量进行操作！
+                                if (!hasTasks()) {
+                                    //选择 返回对应的通道数量
+                                    strategy = select(curDeadlineNanos);
+                                }
+                            } finally {
+                                // 此更新只是为了帮助阻止不必要的选择器唤醒
+                                // 所以可以使用lazySet（没有竞争条件）
+                                nextWakeupNanos.lazySet(AWAKE);
+                            }
+                            // fall through
+                        default:
                     }
                 } catch (IOException e) {
                     // 如果在这里收到IOException，则是因为Selector搞砸了。让我们重建
@@ -495,10 +485,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     handleLoopException(e);
                     continue;
                 }
-
+                //选择通道数量次数 +1
                 selectCnt++;
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
+                //默认值为 50
                 final int ioRatio = this.ioRatio;
                 boolean ranTasks;
                 if (ioRatio == 100) {
@@ -520,6 +511,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     } finally {
                         // 确保我们始终运行任务。
                         final long ioTime = System.nanoTime() - ioStartTime;
+                        //IO时间与运行异步的时间为 1:1
                         ranTasks = runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
                 } else {
@@ -621,7 +613,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     void cancel(SelectionKey key) {
         key.cancel();
-        cancelledKeys ++;
+        cancelledKeys++;
         if (cancelledKeys >= CLEANUP_INTERVAL) {
             cancelledKeys = 0;
             needsToSelectAgain = true;
@@ -637,7 +629,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         Iterator<SelectionKey> i = selectedKeys.iterator();
-        for (;;) {
+        for (; ; ) {
             final SelectionKey k = i.next();
             final Object a = k.attachment();
             i.remove();
@@ -702,6 +694,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     /**
      * NettyChannel处理IO事件
+     *
      * @param k
      * @param ch
      */
@@ -770,15 +763,15 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             state = 2;
         } finally {
             switch (state) {
-            case 0:
-                k.cancel();
-                invokeChannelUnregistered(task, k, null);
-                break;
-            case 1:
-                if (!k.isValid()) { // Cancelled by channelReady()
+                case 0:
+                    k.cancel();
                     invokeChannelUnregistered(task, k, null);
-                }
-                break;
+                    break;
+                case 1:
+                    if (!k.isValid()) { // Cancelled by channelReady()
+                        invokeChannelUnregistered(task, k, null);
+                    }
+                    break;
             }
         }
     }
@@ -787,7 +780,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         selectAgain();
         Set<SelectionKey> keys = selector.keys();
         Collection<AbstractNioChannel> channels = new ArrayList<AbstractNioChannel>(keys.size());
-        for (SelectionKey k: keys) {
+        for (SelectionKey k : keys) {
             Object a = k.attachment();
             if (a instanceof AbstractNioChannel) {
                 channels.add((AbstractNioChannel) a);
@@ -799,7 +792,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
         }
 
-        for (AbstractNioChannel ch: channels) {
+        for (AbstractNioChannel ch : channels) {
             ch.unsafe().close(ch.unsafe().voidPromise());
         }
     }
@@ -841,12 +834,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     /**
      * 返回追备好的IO事件  等待  deadlineNanos 时间
-     * @param deadlineNanos
-     * @return
-     * @throws IOException
+     *
+     * @param deadlineNanos 队尾任务的截止时间
+     * @return IO时间数量
+     * @throws IOException 异常信息
      */
     private int select(long deadlineNanos) throws IOException {
-        //如果返回时 没有任务 就阻塞等待
+        //如果返回时 没有任务 就阻塞等待 当截止时间为Integer.MAX的时候就证明没有任务，就调用selector的永久阻塞方法，直到存在IO事件为止
         if (deadlineNanos == NONE) {
             return selector.select();
         }
