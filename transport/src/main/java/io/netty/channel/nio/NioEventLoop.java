@@ -468,6 +468,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         nextWakeupNanos.set(curDeadlineNanos);
                         try {
                             //有任务  任务队列不为空
+                            //这里是为了优先处理异步任务，当不存在异步任务的时候，Netty会首先进行数据阻塞
+                            //当存在异步任务的时候，Netty会立即执行selectNow来进行一个立即的返回不会进行阻塞，即使没有IO事件
+                            //因为异步任务总是要执行的，异步任务不可能等到select阻塞完毕（有IO事件的时候才会进行执行），所以
+                            //作者这样写的原因是：如果没有io事件，那么进行select()进行阻塞获取IO事件，当有IO时间的时候直接返回，没有IO事件的时候
+                            //进行阻塞，（阻塞过程中可能会有异步任务添加，每当异步任务添加的时候，Netty都会调用 selector.wakeup();进行阻塞的解除）
+                            //使得selector进行返回进而能够执行异步任务
+                            //2. 如果有异步任务的话 就不进行阻塞或者只阻塞很短的一段的时间进行io时间的返回 后续基于io事件的数量进行操作！
                             if (!hasTasks()) {
                                 //选择 返回对应的通道数量
                                 strategy = select(curDeadlineNanos);

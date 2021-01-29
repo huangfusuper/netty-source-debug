@@ -854,7 +854,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }
         }
-
+        //io.netty.channel.nio.NioEventLoop.selector
         if (!addTaskWakesUp && immediate) {
             wakeup(inEventLoop);
         }
