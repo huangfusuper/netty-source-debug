@@ -956,7 +956,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             inFlush0 = true;
 
-            // Mark all pending write requests as failure if the channel is inactive.
+            // 如果通道处于非活动状态，则将所有待处理的写请求标记为失败。
             if (!isActive()) {
                 try {
                     if (isOpen()) {

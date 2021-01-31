@@ -628,6 +628,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+
+    /**
+     * 死循环处理数据
+     * @param selectedKeys 所有的IO事件
+     */
     private void processSelectedKeysPlain(Set<SelectionKey> selectedKeys) {
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
@@ -639,10 +644,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         Iterator<SelectionKey> i = selectedKeys.iterator();
         for (; ; ) {
             final SelectionKey k = i.next();
+            //获取之前保存的Channel对象
             final Object a = k.attachment();
+            //删除这个key
             i.remove();
 
             if (a instanceof AbstractNioChannel) {
+                //通常都是 AbstractNioChannel
+                //处理这个IO事件
                 processSelectedKey(k, (AbstractNioChannel) a);
             } else {
                 @SuppressWarnings("unchecked")
@@ -712,6 +721,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         if (!k.isValid()) {
             final EventLoop eventLoop;
             try {
+                //获取当前channel绑定的事件循环
                 eventLoop = ch.eventLoop();
             } catch (Throwable ignored) {
                 // 如果通道实现由于没有事件循环而引发异常，则我们将忽略此事件
@@ -742,6 +752,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
                 //查询连接
+                // ChannelActive 调用这个回调
+                //底层调用的 pipeline().fireChannelActive() 方法，这时会产生一个 Inbound 事件，然后会在 Pipeline 中进行传播，依次调用 ChannelHandler 的 channelActive() 方法，通知各个 ChannelHandler 连接建立成功。
                 unsafe.finishConnect();
             }
 
@@ -852,9 +864,16 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         if (deadlineNanos == NONE) {
             return selector.select();
         }
+        //Netty 首先记录了当前时间 currentTimeNanos 以及定时任务队列中最近待执行任务的执行时间 selectDeadLineNanos，
+        // Netty 中定时任务队列是按照延迟时间从小到大进行排列的，通过调用 delayNanos(currentTimeNanos)
+        // 方法可以获得第一个待执行定时任务的延迟时间。
+        // 首先判断 currentTimeNanos 是否超过 selectDeadLineNanos 0.5ms 以上，
+        // 如果超过说明当前任务队列中有定时任务需要立刻执行，所以此时会退出无限循环。
+        // 退出之前如果从未执行过 select 操作，那么会立即一次非阻塞的 selectNow 操作。
+        // 那么这里有一个疑问，为什么会留出 0.5ms 的时间窗口呢？在任务队列为空的情况下，可能 select 操作没有获得到任何 I/O 事件就立即停止阻塞返回。
         // 如果最后期限在5微秒内，则超时将仅为0
         //计算任务超时时间   当任务执行在5微妙内的时候  直接不阻塞 selectNow   如果正常的 就最长阻塞timeoutMillis微妙
-        long timeoutMillis = deadlineToDelayNanos(deadlineNanos + 995000L) / 1000000L;
+        long timeoutMillis = deadlineToDelayNanos( deadlineNanos + 995000L) / 1000000L;
         // 非阻塞，只要有通道就绪就立刻返回。没有接返回为0 ：
         // 和select()一样，阻塞到至少有一个通道在你注册的事件上就绪了,但最长阻塞时间为timeout毫秒。
         return timeoutMillis <= 0 ? selector.selectNow() : selector.select(timeoutMillis);

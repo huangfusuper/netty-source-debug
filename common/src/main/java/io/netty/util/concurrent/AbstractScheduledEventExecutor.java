@@ -42,7 +42,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
        @Override
        public void run() { } // Do nothing
     };
-
+   //定时任务队列
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue;
 
     long nextTaskId;
@@ -122,14 +122,18 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     /**
      * Return the {@link Runnable} which is ready to be executed with the given {@code nanoTime}.
      * You should use {@link #nanoTime()} to retrieve the correct {@code nanoTime}.
+     *
+     * 从定时任务队列中取出截止时间小于等于当前时间的定时任务
      */
     protected final Runnable pollScheduledTask(long nanoTime) {
         assert inEventLoop();
-
+        //取出定时任务  peek()
         ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
+        // 如果定时任务的 deadlineNanos 小于当前时间就取出
         if (scheduledTask == null || scheduledTask.deadlineNanos() - nanoTime > 0) {
             return null;
         }
+        //优化以避免再次检查系统时钟
         scheduledTaskQueue.remove();
         scheduledTask.setConsumed();
         return scheduledTask;

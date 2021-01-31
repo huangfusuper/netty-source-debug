@@ -73,7 +73,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, ThreadProperties> PROPERTIES_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(
                     SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
-
+    //普通任务队列
     private final Queue<Runnable> taskQueue;
 
     private volatile Thread thread;
@@ -277,18 +277,29 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    /**
+     *  1. 合并定时任务到普通任务队列
+     *  定时任务只有满足截止时间 deadlineNanos 小于当前时间，才可以取出合并到普通任务。
+     *  由于定时任务是按照截止时间 deadlineNanos 从小到大排列的，所以取出的定时任务不满足合并条件，
+     *  那么定时任务队列中剩下的所有任务都不会满足条件，合并操作完成并退出。
+     *
+     * @return 合并成功
+     */
     private boolean fetchFromScheduledTaskQueue() {
         if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
             return true;
         }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
         for (;;) {
+            // 从定时任务队列中取出截止时间小于等于当前时间的定时任务
             Runnable scheduledTask = pollScheduledTask(nanoTime);
             if (scheduledTask == null) {
                 return true;
             }
+            //放入到普通任务队列
             if (!taskQueue.offer(scheduledTask)) {
                 // 任务队列中没有剩余空间，将其重新添加到ScheduledTaskQueue中，因此我们再次进行拾取。
+                // 如果普通任务队列已满，把定时任务放回
                 scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
                 return false;
             }
@@ -422,6 +433,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return {@code true} if at least one task was executed.
      */
     protected final boolean runAllTasksFrom(Queue<Runnable> taskQueue) {
+        //这里的尾部队列 tailTasks 相比于普通任务队列优先级较低，可以理解为是收尾任务，
+        // 在每次执行完 taskQueue 中任务后会去获取尾部队列中任务执行。
+        // 可以看出 afterRunningAllTasks() 就是把尾部队列 tailTasks 里的任务以此取出执行一遍。
         Runnable task = pollTaskFrom(taskQueue);
         if (task == null) {
             return false;
@@ -458,20 +472,25 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * 从任务队列中轮询所有任务，然后通过运行它们 {@link Runnable#run()} 方法。此方法停止运行
      * 任务队列中的任务，如果运行时间超过 {@code timeoutNanos}.
+     *
+     * 异步任务处理 runAllTasks 的过程可以分为三步：合并定时任务到普通任务队列，然后从普通任务队列中取出任务并处理，最后进行收尾工作。
      */
     protected boolean runAllTasks(long timeoutNanos) {
         //从计划任务队列中获取
+        // 1. 合并定时任务到普通任务队列
         fetchFromScheduledTaskQueue();
+        // 2. 从普通任务队列中取出任务并处理
         Runnable task = pollTask();
         if (task == null) {
             afterRunningAllTasks();
             return false;
         }
-
+        // 计算任务处理的超时时间
         final long deadline = timeoutNanos > 0 ? ScheduledFutureTask.nanoTime() + timeoutNanos : 0;
         long runTasks = 0;
         long lastExecutionTime;
         for (;;) {
+            // 执行任务
             safeExecute(task);
 
             runTasks ++;
@@ -484,14 +503,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     break;
                 }
             }
-
+            // 继续取出下一个任务
             task = pollTask();
             if (task == null) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 break;
             }
         }
-
+        // 3. 收尾工作
         afterRunningAllTasks();
         this.lastExecutionTime = lastExecutionTime;
         return true;
@@ -835,6 +854,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         //判断当前执行的线程是不是 NIoEventLoopGroup的线程  这里是false
         boolean inEventLoop = inEventLoop();
         //将线程加入到队列
+        //最后是将任务添加到了 taskQueue，SingleThreadEventExecutor 中 taskQueue 就是普通任务队列。taskQueue 默认使用的是 Mpsc Queue，可以理解为多生产者单消费者队列
         addTask(task);
         if (!inEventLoop) {
             //启动线程
