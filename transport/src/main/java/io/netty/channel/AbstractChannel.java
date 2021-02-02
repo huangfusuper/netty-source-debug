@@ -80,6 +80,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         id = newId();
         //jdk底层操作读写的类
         //unsafe 操作底层读写
+        //NioServerSocketChannel创建的是  NioMessageUnsafe  这个是处理连接的
+        //NioSocketChannel创建的是 NioByteUnsafe 这个是处理字节读取的
         unsafe = newUnsafe();
         //管道 pipeline 负责业务处理器编排
         pipeline = newChannelPipeline();

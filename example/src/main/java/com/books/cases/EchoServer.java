@@ -7,10 +7,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -27,7 +24,7 @@ public class EchoServer {
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
-            bootstrap.group(boss,work)
+            bootstrap.group(boss, work)
                     //配置 Channel 的类型；
                     .channel(NioServerSocketChannel.class)
                     //设置 ServerSocketChannel 对应的 Handler；
@@ -39,7 +36,7 @@ public class EchoServer {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline().addLast(new FixedLengthFrameDecoder(10));
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     ByteBuf byteBuf = (ByteBuf) msg;
@@ -52,7 +49,7 @@ public class EchoServer {
             //重点
             ChannelFuture future = bootstrap.bind().sync();
             future.channel().closeFuture().sync();
-        }finally {
+        } finally {
             boss.shutdownGracefully();
             work.shutdownGracefully();
         }
