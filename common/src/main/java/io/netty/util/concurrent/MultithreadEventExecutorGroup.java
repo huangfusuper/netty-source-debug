@@ -77,13 +77,13 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             //创建并保存线程执行器  执行器  执行任务的  默认是  DefaultThreadFactory 线程池
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
-        //创建执行器数组
+        //创建执行器数组  数量和预设线程数量一致
         children = new EventExecutor[nThreads];
 
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
-                //创建执行器
+                //创建执行器  开始创建执行器   这里的执行机估计就会EventLoop  是NioEventLoop
                 children[i] = newChild(executor, args);
                 success = true;
             } catch (Exception e) {
@@ -110,7 +110,8 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                 }
             }
         }
-        //创建一个选择器
+        //创建一个选择器  将一个NioEventLoop数组放进去 开始创建一个 chooser
+        //注意  chooser 是一个包装类，这个包装类可以计算并按照策略求出一个对应的NioEventLoop
         chooser = chooserFactory.newChooser(children);
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {

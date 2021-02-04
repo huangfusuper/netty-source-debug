@@ -56,6 +56,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         @Override
         public EventExecutor next() {
             //2的幂等性  实现这个  也能实现循环取数的
+            //executors   就是NioEventLoop数组  按照2次幂求本次获取的EventLoop是个啥
             return executors[idx.getAndIncrement() & executors.length - 1];
         }
     }

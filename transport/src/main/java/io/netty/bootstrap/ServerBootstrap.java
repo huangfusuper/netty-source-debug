@@ -233,6 +233,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            //这里有NioServerSocket接收到对应的连接事件交给子事件循环组进行处理
             //ServerBootstrapAcceptor 开始就把 msg 强制转换为 Channel。难道不会有其他类型的数据吗？
             // 因为 ServerBootstrapAcceptor 是服务端 Channel 中一个特殊的处理器，
             // 而服务端 Channel 的 channelRead 事件只会在新连接接入时触发，所以这里拿到的数据都是客户端新连接。
@@ -245,6 +246,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
             try {
                 //// 注册客户端 Channel
+                //交给子事件循环组来处理读写事件
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {

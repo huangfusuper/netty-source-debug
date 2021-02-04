@@ -480,6 +480,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
             //赋值操作  后续所有的IO处理都交给这个 eventLoop
+            //将eventLoop 绑定到channel上  事实上这里就可以看出来一个channel对应一个 eventLoop   而一个 eventLoop可以对应多个 channel
             AbstractChannel.this.eventLoop = eventLoop;
             // Reactor 线程内部调用  判断该当前的线程与事件线程是否一致  channel会与Thread绑定  这里判断的是当前的线程与绑定的线程是否一致
             //注意此时的thread = null 所以返回false
