@@ -429,6 +429,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      */
     @Override
     protected void run() {
+        System.out.println("启动了");
         int selectCnt = 0;
         for (; ; ) {
             try {

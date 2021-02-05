@@ -1014,6 +1014,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private void doStartThread() {
         assert thread == null;
         //创建一条线程并启动
+        //这个线程又EventLoop
         executor.execute(new Runnable() {
             @Override
             public void run() {
