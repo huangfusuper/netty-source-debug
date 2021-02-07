@@ -29,6 +29,10 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 该类继承自上节说过的AbstractExecutorService，其最重要的是execute方法未实现。
+ * 该类是对AbstractExecutorService的一个进一步加工，添加了group的概念，和不同的Future创建方法。
+ * 这里不要被之前的Java线程池模型所干扰，其不一定是线程池。回到上一节线程池的介绍，最终的样子都是Execute方法决定的。
+ *
  * Abstract base class for {@link EventExecutor} implementations.
  */
 public abstract class AbstractEventExecutor extends AbstractExecutorService implements EventExecutor {

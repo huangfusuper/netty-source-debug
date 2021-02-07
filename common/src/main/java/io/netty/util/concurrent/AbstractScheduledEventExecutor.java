@@ -27,6 +27,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 该类是对AbstractEventExecutor的一个进一步实现，其实现了周期任务的执行。
+ * 原理是内部持有一个优先队列ScheduledFutureTask。所有周期任务都添加到这个队列中，
+ * 也实现了取出周期任务的方法，但是该抽象类并没有具体执行周期任务的实现。
+ *
  * Abstract base class for {@link EventExecutor}s that want to support scheduling.
  */
 public abstract class AbstractScheduledEventExecutor extends AbstractEventExecutor {

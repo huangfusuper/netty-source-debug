@@ -44,6 +44,13 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
+ * 该类是对AbstractScheduledEventExecutor的一个实现，
+ * 其基本上是我们最终的一个EventLoop的雏形了，很多不同协议的EventLoop都是基于它实现的。
+ *
+ * 虽然名字叫做单线程执行器，但是其不一定是单个线程。Executor默认使用的是 ThreadPerTaskExecutor，
+ * 其executor会为每一个任务创建一个线程并执行，当然你也可以传入自己的executor。
+ * Queue使用的是LinkedBlockingQueue，无容量限制的任务队列。其提供了添加任务到任务队列，从任务队列中获取任务的方法。
+ *
  * Abstract base class for {@link OrderedEventExecutor}'s that execute all its submitted tasks in a single thread.
  *
  */

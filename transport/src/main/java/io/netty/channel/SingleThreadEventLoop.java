@@ -27,6 +27,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
+ *
+ * 此类继承自上面讲解的SingleThreadEventExecutor，
+ * 这里多了一个tailTask队列，用于每次事件循环后置任务处理，暂且不管。
+ * 重要的在于很早提到了register方法，将channel注册到线程中。
+ *
  * Abstract base class for {@link EventLoop}s that execute all its submitted tasks in a single thread.
  *
  */
@@ -84,12 +89,18 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         return register(new DefaultChannelPromise(channel, this));
     }
 
+    /**
+     * 实际上就是生成了一个DefaultChannelPromise，将channel和线程绑定，最后都放入了unsafe对象中。
+     * @param promise
+     * @return
+     */
     @Override
     public ChannelFuture register(final ChannelPromise promise) {
         ObjectUtil.checkNotNull(promise, "promise");
         promise.channel().unsafe().register(this, promise);
         return promise;
     }
+
 
     @Deprecated
     @Override
