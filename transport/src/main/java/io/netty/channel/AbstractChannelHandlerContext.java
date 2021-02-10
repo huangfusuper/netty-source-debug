@@ -353,6 +353,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
+        //执行 channelRead
+        //查找下一个传播对象
         invokeChannelRead(findContextInbound(MASK_CHANNEL_READ), msg);
         return this;
     }
@@ -908,14 +910,17 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private AbstractChannelHandlerContext findContextInbound(int mask) {
         AbstractChannelHandlerContext ctx = this;
         do {
+            //获取下一个inbun事件
             ctx = ctx.next;
+            //只要和掩码&运算后为0的都是 inbunt事件
         } while ((ctx.executionMask & mask) == 0);
         return ctx;
     }
-
+    //查找上一个outbund
     private AbstractChannelHandlerContext findContextOutbound(int mask) {
         AbstractChannelHandlerContext ctx = this;
         do {
+            //查找上一个outbund
             ctx = ctx.prev;
         } while ((ctx.executionMask & mask) == 0);
         return ctx;

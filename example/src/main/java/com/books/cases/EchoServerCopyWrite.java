@@ -1,14 +1,12 @@
 package com.books.cases;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.FixedLengthFrameDecoder;
 
-import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 打印执行器
@@ -16,7 +14,7 @@ import java.nio.charset.StandardCharsets;
  * @author huangfu
  * @date 2021年1月21日08:40:14
  */
-public class EchoServerCopy {
+public class EchoServerCopyWrite {
     public static void main(String[] args) throws InterruptedException {
         //配置 EventLoopGroup 线程组；
         EventLoopGroup boss = new NioEventLoopGroup(1);
@@ -35,41 +33,35 @@ public class EchoServerCopy {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
-
+                            ch.pipeline().addLast(new ChannelOutboundHandlerAdapter(){
                                 @Override
-                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                    System.out.println("In A:" + msg);
-                                    ctx.fireChannelRead(msg);
+                                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                                    System.out.println("ChannelOutboundHandlerAdapter A: "+msg);
+                                    ctx.write(msg);
                                 }
                             });
 
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
+                            ch.pipeline().addLast(new ChannelOutboundHandlerAdapter(){
 
                                 @Override
-                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                    System.out.println("In B:" + msg);
-                                    ctx.fireChannelRead(msg);
+                                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                                    System.out.println("ChannelOutboundHandlerAdapter B: "+msg);
+                                    ctx.write(msg);
                                 }
 
                                 @Override
-                                public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                                    //传播到上一个节点
-                                    //ctx.write("xxxx");
-                                    //从头传播到上一个节点
-                                    //ctx.channel().write("xxxx");
-                                    //从head节点开始传播
-                                    ctx.channel().pipeline().fireChannelRead("hello world");
+                                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                                    ctx.executor().schedule(() ->{
+                                        ctx.channel().write("hello,world");
+                                    }, 3, TimeUnit.SECONDS);
                                 }
                             });
 
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
-
+                            ch.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
                                 @Override
-                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                    System.out.println("In C:" + msg);
-                                    //从当前节点向下传播
-                                    ctx.fireChannelRead(msg);
+                                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                                    System.out.println("ChannelOutboundHandlerAdapter C: "+msg);
+                                    ctx.write(msg);
                                 }
                             });
                         }

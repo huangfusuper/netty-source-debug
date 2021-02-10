@@ -35,7 +35,10 @@ import java.util.WeakHashMap;
 final class ChannelHandlerMask {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelHandlerMask.class);
 
-    // Using to mask which methods must be called for a ChannelHandler.
+    // 用于屏蔽必须为ChannelHandler调用哪些方法。
+    /**
+     * 以下是方法代表的掩码值
+     */
     static final int MASK_EXCEPTION_CAUGHT = 1;
     static final int MASK_CHANNEL_REGISTERED = 1 << 1;
     static final int MASK_CHANNEL_UNREGISTERED = 1 << 2;
@@ -54,9 +57,16 @@ final class ChannelHandlerMask {
     static final int MASK_WRITE = 1 << 15;
     static final int MASK_FLUSH = 1 << 16;
 
+    /**
+     * 包含全部 Inbound方法的掩码
+     */
     private static final int MASK_ALL_INBOUND = MASK_EXCEPTION_CAUGHT | MASK_CHANNEL_REGISTERED |
             MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
             MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED;
+
+    /**
+     * 包含全部 outbound方法的掩码
+     */
     private static final int MASK_ALL_OUTBOUND = MASK_EXCEPTION_CAUGHT | MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
             MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH;
 
@@ -85,19 +95,23 @@ final class ChannelHandlerMask {
 
     /**
      * Calculate the {@code executionMask}.
+     * @see com.books.cases.TestMark
+     * https://cloud.tencent.com/developer/article/1603990
      */
     private static int mask0(Class<? extends ChannelHandler> handlerType) {
         int mask = MASK_EXCEPTION_CAUGHT;
         try {
             if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
+                // 如果是 ChannelInboundHandler 实例，所有 Inbound 事件置为 1
                 mask |= MASK_ALL_INBOUND;
-
+                //判断是否存在Skip注解   如果催你在这个跳过的注解  就移除这个
                 if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
                     mask &= ~MASK_CHANNEL_REGISTERED;
                 }
                 if (isSkippable(handlerType, "channelUnregistered", ChannelHandlerContext.class)) {
                     mask &= ~MASK_CHANNEL_UNREGISTERED;
                 }
+                //判断是否存在Skip注解
                 if (isSkippable(handlerType, "channelActive", ChannelHandlerContext.class)) {
                     mask &= ~MASK_CHANNEL_ACTIVE;
                 }

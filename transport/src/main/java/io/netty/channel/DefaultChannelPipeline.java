@@ -28,14 +28,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -199,10 +192,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
+            //验证是否重复添加改handler
             checkMultiplicity(handler);
 
             newCtx = newContext(group, filterName(name, handler), handler);
-
+            //将该节点添加到双向链表中
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
@@ -213,17 +207,22 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 callHandlerCallbackLater(newCtx, true);
                 return this;
             }
-
+            //返回eventLoop
             EventExecutor executor = newCtx.executor();
             if (!executor.inEventLoop()) {
                 callHandlerAddedInEventLoop(newCtx, executor);
                 return this;
             }
         }
+        //通知添加方法回调
         callHandlerAdded0(newCtx);
         return this;
     }
 
+    /**
+     * 一个标准的双向链表添加结构
+     * @param newCtx 上下文吧对象
+     */
     private void addLast0(AbstractChannelHandlerContext newCtx) {
         AbstractChannelHandlerContext prev = tail.prev;
         newCtx.prev = prev;
@@ -593,13 +592,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private static void checkMultiplicity(ChannelHandler handler) {
+        //验证是不是 ChannelHandlerAdapter 类型的，如果不是直接忽略
         if (handler instanceof ChannelHandlerAdapter) {
             ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
+            //如果不是可共享的而且是已经添加过的直接报错
             if (!h.isSharable() && h.added) {
                 throw new ChannelPipelineException(
                         h.getClass().getName() +
                         " is not a @Sharable handler, so can't be added or removed multiple times.");
             }
+            //如果是可共享的或者未添加的，将该handler内的 added属性设置为true证明该handler已经被添加
             h.added = true;
         }
     }
