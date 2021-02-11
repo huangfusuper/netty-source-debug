@@ -106,7 +106,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         this.executor = executor;
         //标识 是in还是out
         this.executionMask = mask(handlerClass);
-        // Its ordered if its driven by the EventLoop or the given Executor is an instanceof OrderedEventExecutor.
+        // 如果由EventLoop或给定的Executor驱动的驱动程序是OrderedEventExecutor的实例，则其顺序为。
         ordered = executor == null || executor instanceof OrderedEventExecutor;
     }
 
@@ -912,7 +912,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         do {
             //获取下一个inbun事件
             ctx = ctx.next;
-            //只要和掩码&运算后为0的都是 inbunt事件
+            //只要和掩码&运算后不为0的都是 inbunt事件
         } while ((ctx.executionMask & mask) == 0);
         return ctx;
     }
