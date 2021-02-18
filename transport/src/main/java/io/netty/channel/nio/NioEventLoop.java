@@ -429,7 +429,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      */
     @Override
     protected void run() {
-        System.out.println("启动了");
         int selectCnt = 0;
         for (; ; ) {
             try {
@@ -576,8 +575,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
             return true;
         }
-        if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
-                selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
+        if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 && selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
             // 选择器连续过早返回多次。
             // 重建选择器以解决此问题。
             logger.warn("Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",

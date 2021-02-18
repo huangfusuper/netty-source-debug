@@ -8,6 +8,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
 
+import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -28,7 +29,20 @@ public class EchoServer {
                     //配置 Channel 的类型；
                     .channel(NioServerSocketChannel.class)
                     //设置 ServerSocketChannel 对应的 Handler；
-                    //handler(new LoggingHandler(LogLevel.DEBUG))
+                    //.handler(new LoggingHandler(LogLevel.DEBUG))
+                    .handler(new ChannelInboundHandlerAdapter(){
+                        @Override
+                        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                            System.out.println("--------------通道被添加");
+                        }
+                    })
+
+//                    .handler(new ChannelOutboundHandlerAdapter() {
+//                        @Override
+//                        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+//                            System.out.println("-------------------绑定--------------");
+//                        }
+//                    })
                     //设置网络监听的端口；
                     .localAddress(8080)
                     //设置 SocketChannel 对应的 Handler；

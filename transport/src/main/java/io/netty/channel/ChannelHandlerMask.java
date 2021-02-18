@@ -93,6 +93,23 @@ final class ChannelHandlerMask {
         return mask;
     }
 
+    public static void main(String[] args) {
+        int a = 1;
+        a &= 2;
+        System.out.println(a);
+
+        int b = 1;
+        b = b & 2;
+        System.out.println(b);
+
+        int c = 1;
+        c &= ~2;
+        System.out.println(c);
+
+        int d = 1;
+        d = (d & ~2);
+        System.out.println(d);
+    }
     /**
      * Calculate the {@code executionMask}.
      * @see com.books.cases.TestMark

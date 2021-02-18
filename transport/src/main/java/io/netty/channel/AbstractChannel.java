@@ -533,7 +533,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // 确保在我们实际通知诺言之前调用handlerHandlered（...）。这是需要的
                 //用户可能已经通过ChannelFutureListener中的管道触发事件。
                 //通知管道  传播handlerAdded事件
-                // 触发 handlerAdded 事件 触发任务 add事件  将LoggingHandler 添加进对应的管道流集合内部
+                //触发 handlerAdded 事件 触发任务 add事件  将LoggingHandler 添加进对应的管道流集合内部
                 pipeline.invokeHandlerAddedIfNeeded();
 
                 safeSetSuccess(promise);

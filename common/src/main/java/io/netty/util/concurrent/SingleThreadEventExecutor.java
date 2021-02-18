@@ -555,7 +555,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Updates the internal timestamp that tells when a submitted task was executed most recently.
+     * 更新内部时间戳，该时间戳指示最近一次执行提交的任务的时间。
      * {@link #runAllTasks()} and {@link #runAllTasks(long)} updates this timestamp automatically, and thus there's
      * usually no need to call this method.  However, if you take the tasks manually using {@link #takeTask()} or
      * {@link #pollTask()}, you have to call this method at the end of task execution loop for accurate quiet period

@@ -141,9 +141,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         //设置 Socket 参数以及用户自定义属性。
         // 在创建服务端 Channel 时，Channel 的配置参数保存在 NioServerSocketChannelConfig 中，在
         // 初始化 Channel 的过程中，Netty 会将这些参数设置到 JDK 底层的 Socket 上，并把用户自定义的属性绑定在 Channel 上。
-        //向上一步 初始化channel初始化完成的conf对象设置 childOption ，childOption是在buildServerBootStr的时候传入的 .childOption
+        //向上一步 初始化channel初始化完成的conf对象设置 option ，option是在buildServerBootStr的时候传入的 .option
         setChannelOptions(channel, options0().entrySet().toArray(EMPTY_OPTION_ARRAY), logger);
-        //向上一步 初始化channel初始化完成的conf对象设置 childAttr ，childAttr是在buildServerBootStr的时候传入的 .childAttr
+        //向上一步 初始化channel初始化完成的conf对象设置 attr ，attr是在buildServerBootStr的时候传入的 .attr
         setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
         //拿到管道
         ChannelPipeline p = channel.pipeline();
