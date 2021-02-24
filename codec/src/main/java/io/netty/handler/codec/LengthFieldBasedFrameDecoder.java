@@ -67,7 +67,7 @@ import io.netty.channel.ChannelHandlerContext;
  * lengthFieldOffset   = 0
  * lengthFieldLength   = 2
  * lengthAdjustment    = 0
- * <b>initialBytesToStrip</b> = <b>2</b> (= the length of the Length field)
+ * <b>initialBytesToStrip</b> = <b>2</b> (= the length of the Length field)  是否需要跳过某些字节
  *
  * BEFORE DECODE (14 bytes)         AFTER DECODE (12 bytes)
  * +--------+----------------+      +----------------+
@@ -89,7 +89,7 @@ import io.netty.channel.ChannelHandlerContext;
  * <pre>
  * lengthFieldOffset   =  0
  * lengthFieldLength   =  2
- * <b>lengthAdjustment</b>    = <b>-2</b> (= the length of the Length field)
+ * <b>lengthAdjustment</b>    = <b>-2</b> (= the length of the Length field)  这里是数据包的长度包括  长度域长度+数据包长度
  * initialBytesToStrip =  0
  *
  * BEFORE DECODE (14 bytes)         AFTER DECODE (14 bytes)
@@ -106,8 +106,8 @@ import io.netty.channel.ChannelHandlerContext;
  * again because the decoder always takes the length of the prepended data into
  * account during frame length calculation.
  * <pre>
- * <b>lengthFieldOffset</b>   = <b>2</b> (= the length of Header 1)
- * <b>lengthFieldLength</b>   = <b>3</b>
+ * <b>lengthFieldOffset</b>   = <b>2</b> (= the length of Header 1)  跳过两个字节
+ * <b>lengthFieldLength</b>   = <b>3</b>   长度字节站三个字节
  * lengthAdjustment    = 0
  * initialBytesToStrip = 0
  *
@@ -127,7 +127,7 @@ import io.netty.channel.ChannelHandlerContext;
  * <pre>
  * lengthFieldOffset   = 0
  * lengthFieldLength   = 3
- * <b>lengthAdjustment</b>    = <b>2</b> (= the length of Header 1)
+ * <b>lengthAdjustment</b>    = <b>2</b> (= the length of Header 1)  长度没有包含head1的长度  这里需要加上
  * initialBytesToStrip = 0
  *
  * BEFORE DECODE (17 bytes)                      AFTER DECODE (17 bytes)
@@ -187,15 +187,39 @@ import io.netty.channel.ChannelHandlerContext;
 public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
 
     private final ByteOrder byteOrder;
+    /**
+     * 最大长度
+     */
     private final int maxFrameLength;
+    /**
+     * 长度域偏移量
+     */
     private final int lengthFieldOffset;
+    /**
+     * 长度域的长度
+     */
     private final int lengthFieldLength;
     private final int lengthFieldEndOffset;
+    /**
+     * 长度域长度 + 这个属性 等于在真正的数据包长度
+     */
     private final int lengthAdjustment;
+    /**
+     * 需要跳过的字节数
+     */
     private final int initialBytesToStrip;
     private final boolean failFast;
+    /**
+     * 丢弃模式
+     */
     private boolean discardingTooLongFrame;
+    /**
+     * 丢弃了多少字节
+     */
     private long tooLongFrameLength;
+    /**
+     * 要丢弃多少字节
+     */
     private long bytesToDiscard;
 
     /**
@@ -322,6 +346,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         this.lengthFieldOffset = lengthFieldOffset;
         this.lengthFieldLength = lengthFieldLength;
         this.lengthAdjustment = lengthAdjustment;
+        //长度域偏移量 + 长度域的长度  等于数据长度域尾部的位置
         this.lengthFieldEndOffset = lengthFieldOffset + lengthFieldLength;
         this.initialBytesToStrip = initialBytesToStrip;
         this.failFast = failFast;
@@ -397,18 +422,20 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         if (discardingTooLongFrame) {
             discardingTooLongFrame(in);
         }
-
+        //长度域偏移量 + 长度域的长度  等于数据长度域尾部的位置
+        //当可读字节话没有到长度域的尾部位置的时候 就直接返回 证明数据包不完整
         if (in.readableBytes() < lengthFieldEndOffset) {
             return null;
         }
-
+        //计算绝对偏移量   数据的读指针+长度域的偏移量 = 该长度域的偏移量在整个数据内的偏移量
         int actualLengthFieldOffset = in.readerIndex() + lengthFieldOffset;
+        //开始读取数据  从in数据包  从 actualLengthFieldOffset开始  读取lengthFieldLength个长度的数据  读取长度的具体数据 计算出数据到底有多长
         long frameLength = getUnadjustedFrameLength(in, actualLengthFieldOffset, lengthFieldLength, byteOrder);
-
+        //长度小于0的话  就是不合法 直接抛异常
         if (frameLength < 0) {
             failOnNegativeLengthField(in, frameLength, lengthFieldEndOffset);
         }
-
+        //算出本次应该读取到的末尾位置
         frameLength += lengthAdjustment + lengthFieldEndOffset;
 
         if (frameLength < lengthFieldEndOffset) {
