@@ -404,7 +404,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf setIndex(int readerIndex, int writerIndex);
 
     /**
-     * Returns the number of readable bytes which is equal to
+     * 返回等于的可读字节数
      * {@code (this.writerIndex - this.readerIndex)}.
      */
     public abstract int readableBytes();

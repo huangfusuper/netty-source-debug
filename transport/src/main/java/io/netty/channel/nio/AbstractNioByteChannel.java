@@ -220,7 +220,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 in.remove();
                 return 0;
             }
-
+            //开始写入
             final int localFlushedAmount = doWriteBytes(buf);
             if (localFlushedAmount > 0) {
                 in.progress(localFlushedAmount);
@@ -229,6 +229,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
                 return 1;
             }
+
+
+            //磁盘写入
         } else if (msg instanceof FileRegion) {
             FileRegion region = (FileRegion) msg;
             if (region.transferred() >= region.count()) {
@@ -255,6 +258,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         int writeSpinCount = config().getWriteSpinCount();
         do {
+            //获取当前刷新队列的头数据
             Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
@@ -262,6 +266,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 // Directly return here so incompleteWrite(...) is not called.
                 return;
             }
+            //不断循环写入
+            //开始想jdk管道写入数据
             writeSpinCount -= doWriteInternal(in, msg);
         } while (writeSpinCount > 0);
 

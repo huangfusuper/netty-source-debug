@@ -73,15 +73,23 @@ public final class ChannelOutboundBuffer {
 
     private final Channel channel;
 
-    // Entry(flushedEntry) --> ... Entry(unflushedEntry) --> ... Entry(tailEntry)
-    //
-    // The Entry that is the first in the linked-list structure that was flushed
+    /**
+     * Entry(flushedEntry) --> ... Entry(unflushedEntry) --> ... Entry(tailEntry)
+     *
+     * 刷新链表结构中的第一个条目的条目
+     */
     private Entry flushedEntry;
-    // The Entry which is the first unflushed in the linked-list structure
+    /**
+     * 链表结构中第一个未刷新的条目
+     */
     private Entry unflushedEntry;
-    // The Entry which represents the tail of the buffer
+    /**
+     * 代表缓冲区尾部的条目
+     */
     private Entry tailEntry;
-    // The number of flushed entries that are not written yet
+    /**
+     * 尚未写入的刷新条目数
+     */
     private int flushed;
 
     private int nioBufferCount;
@@ -108,10 +116,13 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
+     *
+     * http://images.huangfusuper.cn/typora/write_next_queue.gif
      * Add given message to this {@link ChannelOutboundBuffer}. The given {@link ChannelPromise} will be notified once
      * the message was written.
      */
     public void addMessage(Object msg, int size, ChannelPromise promise) {
+        //将BuytBuf封装为Entity
         Entry entry = Entry.newInstance(msg, size, total(msg), promise);
         if (tailEntry == null) {
             flushedEntry = null;
@@ -124,12 +135,14 @@ public final class ChannelOutboundBuffer {
             unflushedEntry = entry;
         }
 
-        // increment pending bytes after adding message to the unflushed arrays.
+        // 将消息添加到未刷新的数组后，增加待处理字节。
         // See https://github.com/netty/netty/issues/1619
         incrementPendingOutboundBytes(entry.pendingSize, false);
     }
 
     /**
+     *
+     * ![](http://images.huangfusuper.cn/typora/fulsh_querey.gif)
      * Add a flush to this {@link ChannelOutboundBuffer}. This means all previous added messages are marked as flushed
      * and so you will be able to handle them.
      */
@@ -138,30 +151,36 @@ public final class ChannelOutboundBuffer {
         // where added in the meantime.
         //
         // See https://github.com/netty/netty/issues/2577
+        //取出第一个 等待刷新队列的节点
         Entry entry = unflushedEntry;
         if (entry != null) {
+            //当第一次添加
             if (flushedEntry == null) {
-                // there is no flushedEntry yet, so start with the entry
+                // 还没有flushedEntry，所以从条目开始
+                //将刷新队列等于当前的待刷新的节点
                 flushedEntry = entry;
             }
             do {
+                //自增
                 flushed ++;
                 if (!entry.promise.setUncancellable()) {
-                    // Was cancelled so make sure we free up memory and notify about the freed bytes
+                    // 已取消，因此请确保我们释放内存并通知释放的字节
                     int pending = entry.cancel();
+                    //减少将要写入的待处理字节。
                     decrementPendingOutboundBytes(pending, false, true);
                 }
+                //不断将数据处理完毕
                 entry = entry.next;
             } while (entry != null);
 
-            // All flushed so reset unflushedEntry
+            // 所有已刷新，因此重置为未刷新
             unflushedEntry = null;
         }
     }
 
     /**
-     * Increment the pending bytes which will be written at some point.
-     * This method is thread-safe!
+     * 增加将要写入的待处理字节。
+     * 此方法是线程安全的！
      */
     void incrementPendingOutboundBytes(long size) {
         incrementPendingOutboundBytes(size, true);
@@ -171,16 +190,17 @@ public final class ChannelOutboundBuffer {
         if (size == 0) {
             return;
         }
-
+        //当前缓冲区有多少代写字节 TOTAL_PENDING_SIZE_UPDATER
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
+        //待写字节 > 64 * 1024的话
         if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
             setUnwritable(invokeLater);
         }
     }
 
     /**
-     * Decrement the pending bytes which will be written at some point.
-     * This method is thread-safe!
+     * 减少将要写入的待处理字节。
+     * 此方法是线程安全的！
      */
     void decrementPendingOutboundBytes(long size) {
         decrementPendingOutboundBytes(size, true, true);
@@ -192,7 +212,9 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
+        //待处理的节点 小于 32*1024
         if (notifyWritability && newWriteBufferSize < channel.config().getWriteBufferLowWaterMark()) {
+            //ChannelWritabilityChanged(invokeLater);
             setWritable(invokeLater);
         }
     }
@@ -604,6 +626,7 @@ public final class ChannelOutboundBuffer {
             final int newValue = oldValue | 1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
                 if (oldValue == 0 && newValue != 0) {
+                    //传播 ChannelWritabilityChanged(invokeLater) 事件
                     fireChannelWritabilityChanged(invokeLater);
                 }
                 break;

@@ -99,17 +99,22 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ByteBuf buf = null;
         try {
+            //判断当前的处理器能否编码该类型的数据
             if (acceptOutboundMessage(msg)) {
+                //转换成对应的类型
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
+                //分配一个byteBUf 这里默认分配的是堆外内存
                 buf = allocateBuffer(ctx, cast, preferDirect);
                 try {
+                    //调用抽象方法进行编码 此调用完成后  buf就是编码后的数据
                     encode(ctx, cast, buf);
                 } finally {
                     ReferenceCountUtil.release(cast);
                 }
-
+                //如果有可读数据
                 if (buf.isReadable()) {
+                    //开始传播该事件  不做特殊的定制化开发的话  一般会传播到head节点进行write进行写出
                     ctx.write(buf, promise);
                 } else {
                     buf.release();

@@ -918,6 +918,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             int size;
             try {
+                //转换bytebuf为堆外内存
+                //io.netty.channel.nio.AbstractNioByteChannel.filterOutboundMessage
                 msg = filterOutboundMessage(msg);
                 size = pipeline.estimatorHandle().size(msg);
                 if (size < 0) {
@@ -928,7 +930,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 ReferenceCountUtil.release(msg);
                 return;
             }
-
+            //将数据插入到写队列
             outboundBuffer.addMessage(msg, size, promise);
         }
 
@@ -940,11 +942,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (outboundBuffer == null) {
                 return;
             }
-
+            //添加到刷新缓冲区
             outboundBuffer.addFlush();
+            //开始刷新到管道
             flush0();
         }
 
+        /**
+         * 开始刷新到管道流
+         */
         @SuppressWarnings("deprecation")
         protected void flush0() {
             if (inFlush0) {
@@ -975,6 +981,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             try {
+                //开始写入
                 doWrite(outboundBuffer);
             } catch (Throwable t) {
                 if (t instanceof IOException && config().isAutoClose()) {

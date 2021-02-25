@@ -500,7 +500,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         if (length == 0) {
             return 0;
         }
-
+        //JDK ByteBuffer
         ByteBuffer tmpBuf;
         if (internal) {
             tmpBuf = internalNioBuffer();
@@ -508,6 +508,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
             tmpBuf = buffer.duplicate();
         }
         tmpBuf.clear().position(index).limit(index + length);
+        //通过JDK管道进行写出
         return out.write(tmpBuf);
     }
 

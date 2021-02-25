@@ -762,7 +762,9 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     void invokeWriteAndFlush(Object msg, ChannelPromise promise) {
         if (invokeHandler()) {
+            //加入写队列
             invokeWrite0(msg, promise);
+            //刷新缓冲区
             invokeFlush0();
         } else {
             writeAndFlush(msg, promise);
@@ -781,15 +783,17 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             ReferenceCountUtil.release(msg);
             throw e;
         }
-
+        //寻找对应的handler 根据掩码
         final AbstractChannelHandlerContext next = findContextOutbound(flush ?
                 (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
         final Object m = pipeline.touch(msg, next);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
+            //是否调用了 writeAndFlush
             if (flush) {
                 next.invokeWriteAndFlush(m, promise);
             } else {
+                //是否调用了 write
                 next.invokeWrite(m, promise);
             }
         } else {
