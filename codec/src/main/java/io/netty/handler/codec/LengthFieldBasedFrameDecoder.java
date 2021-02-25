@@ -361,10 +361,15 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     private void discardingTooLongFrame(ByteBuf in) {
+        //获取剩余未丢弃的自己数目
         long bytesToDiscard = this.bytesToDiscard;
+        //获取一个最小值
         int localBytesToDiscard = (int) Math.min(bytesToDiscard, in.readableBytes());
+        //跳过这个数据
         in.skipBytes(localBytesToDiscard);
+        //将剩余可丢弃的数据 - 本次跳过的数据
         bytesToDiscard -= localBytesToDiscard;
+        //同时赋值
         this.bytesToDiscard = bytesToDiscard;
 
         failIfNecessary(false);
@@ -385,17 +390,25 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
               "than lengthFieldEndOffset: " + lengthFieldEndOffset);
     }
 
+    /**
+     * 超出帧长
+     * @param in 数据包
+     * @param frameLength 本次要抽取的长度
+     */
     private void exceededFrameLength(ByteBuf in, long frameLength) {
+        //数据包 - 可读字节数
         long discard = frameLength - in.readableBytes();
         tooLongFrameLength = frameLength;
-
+        //发现本次缓冲区里还有数据包以外的数据 证明还有数据没读 只需要吧现在超长的数据跳过就可以读下一批数据了
         if (discard < 0) {
-            // buffer contains more bytes then the frameLength so we can discard all now
+            // 缓冲区包含更多的字节，然后是frameLength，所以我们现在就可以丢弃所有字节
             in.skipBytes((int) frameLength);
         } else {
-            // Enter the discard mode and discard everything received so far.
+            // 进入丢弃模式并丢弃到目前为止收到的所有内容。
             discardingTooLongFrame = true;
+            //还没丢万  可读字节数没有达到一个数据包的长度 本次丢弃的只是一部分 后续记录一下  再来数据了  在丢弃 discard个
             bytesToDiscard = discard;
+            //跳过全部的数据
             in.skipBytes(in.readableBytes());
         }
         failIfNecessary(true);
@@ -438,31 +451,38 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         //算出本次应该读取到的末尾位置
         frameLength += lengthAdjustment + lengthFieldEndOffset;
 
+        //抽取出来的长度是小于长度域尾部的位置的话    就抛异常 同时跳过 该字节数
         if (frameLength < lengthFieldEndOffset) {
             failOnFrameLengthLessThanLengthFieldEndOffset(in, frameLength, lengthFieldEndOffset);
         }
-
+        //如果本次读取的字节数大于最大长度
         if (frameLength > maxFrameLength) {
             exceededFrameLength(in, frameLength);
             return null;
         }
 
-        // never overflows because it's less than maxFrameLength
+        // 永远不会溢出，因为它小于maxFrameLength
         int frameLengthInt = (int) frameLength;
+        //如果当前可读字节数小于当前的数据包长度  就返回 等待下一次读取
         if (in.readableBytes() < frameLengthInt) {
             return null;
         }
 
+        //跳过的字节数大于 数据包长度 直接报错
         if (initialBytesToStrip > frameLengthInt) {
             failOnFrameLengthLessThanInitialBytesToStrip(in, frameLength, initialBytesToStrip);
         }
+        //跳过需要跳过的数据
         in.skipBytes(initialBytesToStrip);
 
-        // extract frame
+        // 提取框
         int readerIndex = in.readerIndex();
         int actualFrameLength = frameLengthInt - initialBytesToStrip;
+        //从当前的都指针读取actualFrameLength个字节
         ByteBuf frame = extractFrame(ctx, in, readerIndex, actualFrameLength);
+        //将都指针调整到数据包末尾
         in.readerIndex(readerIndex + actualFrameLength);
+        //返回这个完整的数据包
         return frame;
     }
 
@@ -501,9 +521,10 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     private void failIfNecessary(boolean firstDetectionOfTooLongFrame) {
+        //查看剩余可丢弃的数据是否为0  为0证明需要丢弃的数据包已经全部丢弃完成 需要对个状态进行复位
         if (bytesToDiscard == 0) {
-            // Reset to the initial state and tell the handlers that
-            // the frame was too large.
+            // 重置为初始状态，并告知处理程序
+            // 框架太大。
             long tooLongFrameLength = this.tooLongFrameLength;
             this.tooLongFrameLength = 0;
             discardingTooLongFrame = false;
@@ -511,7 +532,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
                 fail(tooLongFrameLength);
             }
         } else {
-            // Keep discarding and notify handlers if necessary.
+            // 保持丢弃并在必要时通知处理程序。 failFast设置为true的话  只要发现超长就报错   为false的话  发现超长后，丢弃一个完整的数据包后在报错
             if (failFast && firstDetectionOfTooLongFrame) {
                 fail(tooLongFrameLength);
             }
