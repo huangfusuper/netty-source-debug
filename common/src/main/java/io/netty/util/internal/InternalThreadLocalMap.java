@@ -65,11 +65,18 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         return slowThreadLocalMap.get();
     }
 
+    /**
+     * 获取数据缓冲池
+     * @return 返回数据缓冲池
+     */
     public static InternalThreadLocalMap get() {
+        //获取当前线程
         Thread thread = Thread.currentThread();
         if (thread instanceof FastThreadLocalThread) {
+            //一个线程内的多个 fastThreadLocal  会所set的值 会放入到一个存储数组内  内部一个线程使用的是一个缓存
             return fastGet((FastThreadLocalThread) thread);
         } else {
+            //一个线程内的多个 ThreadLocal  会所set的值 会放入到一个存储数组内  内部一个线程使用的是一个缓存
             return slowGet();
         }
     }
@@ -77,12 +84,14 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private static InternalThreadLocalMap fastGet(FastThreadLocalThread thread) {
         InternalThreadLocalMap threadLocalMap = thread.threadLocalMap();
         if (threadLocalMap == null) {
+            //从当前的FastThreadLoadThread中获取一个Map 注意该map是数组实现的
             thread.setThreadLocalMap(threadLocalMap = new InternalThreadLocalMap());
         }
         return threadLocalMap;
     }
 
     private static InternalThreadLocalMap slowGet() {
+        //使用jdk ThreadLoad实现
         ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = UnpaddedInternalThreadLocalMap.slowThreadLocalMap;
         InternalThreadLocalMap ret = slowThreadLocalMap.get();
         if (ret == null) {
@@ -293,10 +302,15 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
      * @return {@code true} if and only if a new thread-local variable has been created
      */
     public boolean setIndexedVariable(int index, Object value) {
+        //获取当前线程的缓冲池
         Object[] lookup = indexedVariables;
+        //当索引值不大于数组空间的时候
         if (index < lookup.length) {
+            //获取原来的值
             Object oldValue = lookup[index];
+            //将该数据放到缓冲池中
             lookup[index] = value;
+            //判断这个值是不是UNSET
             return oldValue == UNSET;
         } else {
             expandIndexedVariableTableAndSet(index, value);

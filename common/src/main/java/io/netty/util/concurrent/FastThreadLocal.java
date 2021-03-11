@@ -125,20 +125,24 @@ public class FastThreadLocal<V> {
     private final int index;
 
     public FastThreadLocal() {
+        //创建的时候会为这个 FastThreadLocal分配一个索引  该索引是源自类 CAS保证
         index = InternalThreadLocalMap.nextVariableIndex();
     }
 
     /**
-     * Returns the current value for the current thread
+     * 返回当前线程的当前值
      */
     @SuppressWarnings("unchecked")
     public final V get() {
+        //从当前的线程中获取一个 InternalThreadLocalMap
         InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
+        //根据索引获取对应的值  O1
         Object v = threadLocalMap.indexedVariable(index);
+        //如果获取的值不等于 UNSET 就返回
         if (v != InternalThreadLocalMap.UNSET) {
             return (V) v;
         }
-
+        //否则回调 initialize 方法
         return initialize(threadLocalMap);
     }
 
@@ -185,11 +189,14 @@ public class FastThreadLocal<V> {
     }
 
     /**
-     * Set the value for the current thread.
+     * 设置当前线程的值。
      */
     public final void set(V value) {
+        //查看当前的设置的值是不是 UNSET 是的话就删除
         if (value != InternalThreadLocalMap.UNSET) {
+            //获取线程缓冲池对象
             InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
+            //将数据放入到数据缓冲池
             setKnownNotUnset(threadLocalMap, value);
         } else {
             remove();
@@ -211,6 +218,7 @@ public class FastThreadLocal<V> {
      * @return see {@link InternalThreadLocalMap#setIndexedVariable(int, Object)}.
      */
     private void setKnownNotUnset(InternalThreadLocalMap threadLocalMap, V value) {
+        //判断是否放入的空值
         if (threadLocalMap.setIndexedVariable(index, value)) {
             addToVariablesToRemove(threadLocalMap, this);
         }

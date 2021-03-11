@@ -521,7 +521,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     private void failIfNecessary(boolean firstDetectionOfTooLongFrame) {
-        //查看剩余可丢弃的数据是否为0  为0证明需要丢弃的数据包已经全部丢弃完成 需要对个状态进行复位
+        //查看剩余可丢弃的数据是否为0  为0证明需要丢弃的数据包已经全部丢弃完成 需要对个状态进行复位      
         if (bytesToDiscard == 0) {
             // 重置为初始状态，并告知处理程序
             // 框架太大。
