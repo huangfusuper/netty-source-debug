@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author huangfu
@@ -34,9 +35,17 @@ public class MyHandler implements Runnable {
                 read();
                 key.interestOps(SelectionKey.OP_WRITE);
             }else if(key.isWritable()){
-                System.out.println("准备写");
+                // 2. 分配缓存区
+                ByteBuffer buffer = ByteBuffer.allocate(128);
+                // 3. 清空缓存区
+                buffer.clear();
+                // 4. 写入发送的信息
+                buffer.put(ByteBuffer.wrap("客户端返回".getBytes(StandardCharsets.UTF_8)));
+                // 5. 将缓存区的指针回到初始位置
+                buffer.flip();
                 //注销这个监控key 未来不再监控这个通道
                 //key.cancel();
+                socketChannel.write(buffer);
                 key.interestOps(SelectionKey.OP_READ);
             }
 

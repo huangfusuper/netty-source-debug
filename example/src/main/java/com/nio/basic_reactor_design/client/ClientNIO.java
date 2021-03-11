@@ -17,7 +17,7 @@ import java.util.Scanner;
 
 public class ClientNIO {
     // 端口号
-    private static final int PORT = 8888;
+    private static final int PORT = 8989;
     // 缓存大小
     private static final int BUFFER_SIZE = 1024;
     // 控制台输入流
