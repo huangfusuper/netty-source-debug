@@ -24,6 +24,7 @@ public class Acceptor implements Runnable {
     @Override
     public void run() {
         try {
+            //获取客户端连接
             SocketChannel socketChannel = serverSocketChannel.accept();
             new MyHandler(socketChannel, selector);
         } catch (IOException e) {

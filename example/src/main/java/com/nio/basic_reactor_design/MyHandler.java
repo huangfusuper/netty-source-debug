@@ -20,10 +20,15 @@ public class MyHandler implements Runnable {
     public MyHandler(SocketChannel socketChannel, Selector selector) throws IOException {
         this.socketChannel = socketChannel;
         this.selector = selector;
+        //将客户端连接设置为非阻塞
         socketChannel.configureBlocking(false);
+        //注册发哦选择器 不关注任何事件
         key = socketChannel.register(selector, 0);
+        //绑定当前的处理器
         key.attach(this);
+        //关注读事件
         key.interestOps(SelectionKey.OP_READ);
+        //开始下次循环
         selector.wakeup();
     }
 
@@ -31,14 +36,14 @@ public class MyHandler implements Runnable {
     public void run() {
 
         try{
+            //如果为读事件
             if (key.isReadable()) {
                 read();
+                //设置为写事件
                 key.interestOps(SelectionKey.OP_WRITE);
             }else if(key.isWritable()){
                 // 2. 分配缓存区
                 ByteBuffer buffer = ByteBuffer.allocate(128);
-                // 3. 清空缓存区
-                buffer.clear();
                 // 4. 写入发送的信息
                 buffer.put(ByteBuffer.wrap("客户端返回".getBytes(StandardCharsets.UTF_8)));
                 // 5. 将缓存区的指针回到初始位置
