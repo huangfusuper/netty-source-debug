@@ -37,7 +37,19 @@ public class SimpleEchoClient {
                         }
                     });
             ChannelFuture sync = bootstrap.connect().sync();
+            ChannelFuture sync1 = bootstrap.connect().sync();
+            ChannelFuture sync2 = bootstrap.connect().sync();
+            ChannelFuture sync3 = bootstrap.connect().sync();
+            ChannelFuture sync4 = bootstrap.connect().sync();
+            ChannelFuture sync5 = bootstrap.connect().sync();
+            ChannelFuture sync6 = bootstrap.connect().sync();
             sync.channel().closeFuture().sync();
+            sync1.channel().closeFuture().sync();
+            sync2.channel().closeFuture().sync();
+            sync3.channel().closeFuture().sync();
+            sync4.channel().closeFuture().sync();
+            sync5.channel().closeFuture().sync();
+            sync6.channel().closeFuture().sync();
         }finally {
             boss.shutdownGracefully();
         }
