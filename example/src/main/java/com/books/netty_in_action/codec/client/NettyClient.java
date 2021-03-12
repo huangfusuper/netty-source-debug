@@ -28,7 +28,25 @@ public class NettyClient {
         });
         bootstrap.remoteAddress(new InetSocketAddress("127.0.0.1",8989));
         ChannelFuture sync = bootstrap.connect().sync();
+        ChannelFuture sync1 = bootstrap.connect().sync();
+        ChannelFuture sync2 = bootstrap.connect().sync();
+        ChannelFuture sync3 = bootstrap.connect().sync();
         sync.channel().closeFuture().sync().addListener(future -> {
+            if (future.isSuccess()) {
+                boss.shutdownGracefully();
+            }
+        });
+        sync1.channel().closeFuture().sync().addListener(future -> {
+            if (future.isSuccess()) {
+                boss.shutdownGracefully();
+            }
+        });
+        sync2.channel().closeFuture().sync().addListener(future -> {
+            if (future.isSuccess()) {
+                boss.shutdownGracefully();
+            }
+        });
+        sync3.channel().closeFuture().sync().addListener(future -> {
             if (future.isSuccess()) {
                 boss.shutdownGracefully();
             }

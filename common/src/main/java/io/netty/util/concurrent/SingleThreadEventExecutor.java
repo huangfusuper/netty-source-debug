@@ -863,6 +863,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         //将线程加入到队列
         //最后是将任务添加到了 taskQueue，SingleThreadEventExecutor 中 taskQueue 就是普通任务队列。taskQueue 默认使用的是 Mpsc Queue，可以理解为多生产者单消费者队列
         addTask(task);
+        //这里永远只能启动一次  一个eventLoop
         if (!inEventLoop) {
             //启动线程
             startThread();
