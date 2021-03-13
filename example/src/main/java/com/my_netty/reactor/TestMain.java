@@ -15,7 +15,7 @@ import java.nio.channels.ServerSocketChannel;
 public class TestMain {
 
     public static void main(String[] args) throws IOException {
-        SelectorGroup selectorGroup = new SelectorGroup(3);
+        SelectorGroup selectorGroup = new SelectorGroup(2);
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
         Selector selector = Selector.open();
         serverSocketChannel.configureBlocking(false);

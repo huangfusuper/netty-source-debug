@@ -30,13 +30,13 @@ public class Acceptor implements Runnable {
         try {
             SocketChannel socketChannel = serverSocketChannel.accept();
             Selector next = selectorGroup.next();
-            //next.wakeup();
             socketChannel.configureBlocking(false);
             SelectionKey register = socketChannel.register(next, 0);
             register.interestOps(SelectionKey.OP_READ);
+            next.wakeup();
             System.out.println("检测到连接：" + socketChannel.getRemoteAddress());
             if(ThreadContext.runSelect.add(next)){
-                new Thread(new Handler(socketChannel,next)).start();
+                new Thread(new Handler(next)).start();
             }
 
 
