@@ -432,7 +432,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
         private RecvByteBufAllocator.Handle recvHandle;
         private boolean inFlush0;
-        /** true if the channel has never been registered, false otherwise */
+        /** true 如果从未注册过该频道，则返回false */
         private boolean neverRegistered = true;
 
         private void assertEventLoop() {

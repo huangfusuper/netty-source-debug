@@ -1399,7 +1399,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void channelActive(ChannelHandlerContext ctx) {
             //传播事件
             ctx.fireChannelActive();
-
+            //设置为读监听
             readIfIsAutoRead();
         }
 
