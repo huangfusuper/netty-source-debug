@@ -1,5 +1,7 @@
 package com.nio.basic_reactor_design.client;
 
+import sun.misc.Unsafe;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -95,10 +97,13 @@ public class ClientNIO {
      * @param key
      */
     private void write(Selector selector, SelectionKey key) throws IOException {
+//        Unsafe unsafe = Unsafe.getUnsafe();
+//        unsafe.allocateMemory()
         // 1. 获得TCP协议通信的通道
         SocketChannel socketChannel = (SocketChannel) key.channel();
         // 2. 分配缓存区
         ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024);
         // 3. 清空缓存区
         buffer.clear();
         // 4. 写入发送的信息

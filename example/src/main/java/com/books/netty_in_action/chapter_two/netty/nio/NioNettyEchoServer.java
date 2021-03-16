@@ -41,15 +41,19 @@ public class NioNettyEchoServer {
 
                                     ctx.writeAndFlush(byteBuf.duplicate()).addListener((ChannelFutureListener) future -> {
                                         if (future.isSuccess()) {
-                                            ctx.close();
+                                            System.out.println("yes");
                                         }
                                     });
                                 }
 
+                                @Override
+                                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                                    System.out.println("---------");
+                                }
 
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                                    cause.printStackTrace();
+                                    System.out.println("------异常了---------");
                                     ctx.close();
                                 }
                             });
