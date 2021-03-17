@@ -56,7 +56,9 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         this.alloc = checkNotNull(alloc, "alloc");
+        //所谓堆上内存就是一个字节数字 内部返回一个字节数组保存起来  unsafe和非unsafe
         setArray(allocateArray(initialCapacity));
+        //初始化读写指针   将读写指针化为0
         setIndex(0, 0);
     }
 

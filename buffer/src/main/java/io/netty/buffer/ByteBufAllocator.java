@@ -24,111 +24,102 @@ public interface ByteBufAllocator {
     ByteBufAllocator DEFAULT = ByteBufUtil.DEFAULT_ALLOCATOR;
 
     /**
-     * Allocate a {@link ByteBuf}. If it is a direct or heap buffer
-     * depends on the actual implementation.
+     * 分配一个{@link ByteBuf}。是直接缓冲区还是堆缓冲区取决于实际实现。
      */
     ByteBuf buffer();
 
     /**
-     * Allocate a {@link ByteBuf} with the given initial capacity.
-     * If it is a direct or heap buffer depends on the actual implementation.
+     * 用给定的初始容量分配一个{@link ByteBuf}。是直接缓冲区还是堆缓冲区取决于实际实现。
      */
     ByteBuf buffer(int initialCapacity);
 
     /**
-     * Allocate a {@link ByteBuf} with the given initial capacity and the given
-     * maximal capacity. If it is a direct or heap buffer depends on the actual
-     * implementation.
+     *用给定的初始容量和给定的最大容量分配一个{@link ByteBuf}。是直接缓冲区还是堆缓冲区取决于实际实现。
      */
     ByteBuf buffer(int initialCapacity, int maxCapacity);
 
     /**
-     * Allocate a {@link ByteBuf}, preferably a direct buffer which is suitable for I/O.
+     * 分配一个{@link ByteBuf}，最好是一个适合IO的直接缓冲区。
      */
     ByteBuf ioBuffer();
 
     /**
-     * Allocate a {@link ByteBuf}, preferably a direct buffer which is suitable for I/O.
+     * 分配一个{@link ByteBuf}，最好是一个适合IO的直接缓冲区。
      */
     ByteBuf ioBuffer(int initialCapacity);
 
     /**
-     * Allocate a {@link ByteBuf}, preferably a direct buffer which is suitable for I/O.
+     * 分配一个{@link ByteBuf}，最好是一个适合IO的直接缓冲区。
      */
     ByteBuf ioBuffer(int initialCapacity, int maxCapacity);
 
     /**
-     * Allocate a heap {@link ByteBuf}.
+     * 分配堆{@link ByteBuf}。
      */
     ByteBuf heapBuffer();
 
     /**
-     * Allocate a heap {@link ByteBuf} with the given initial capacity.
+     * 用给定的初始容量分配堆{@link ByteBuf}。
      */
     ByteBuf heapBuffer(int initialCapacity);
 
     /**
-     * Allocate a heap {@link ByteBuf} with the given initial capacity and the given
-     * maximal capacity.
+     * 用给定的初始容量和给定的最大容量分配堆{@link ByteBuf}。
      */
     ByteBuf heapBuffer(int initialCapacity, int maxCapacity);
 
     /**
-     * Allocate a direct {@link ByteBuf}.
+     *分配直接的{@link ByteBuf}。
      */
     ByteBuf directBuffer();
 
     /**
-     * Allocate a direct {@link ByteBuf} with the given initial capacity.
+     * 用给定的初始容量分配直接的{@link ByteBuf}。
      */
     ByteBuf directBuffer(int initialCapacity);
 
     /**
-     * Allocate a direct {@link ByteBuf} with the given initial capacity and the given
-     * maximal capacity.
+     * 分配具有给定初始容量和给定最大容量的直接{@link ByteBuf}。
      */
     ByteBuf directBuffer(int initialCapacity, int maxCapacity);
 
     /**
-     * Allocate a {@link CompositeByteBuf}.
-     * If it is a direct or heap buffer depends on the actual implementation.
+     * 分配一个{@link CompositeByteBuf}。是直接缓冲区还是堆缓冲区取决于实际实现。
      */
     CompositeByteBuf compositeBuffer();
 
     /**
-     * Allocate a {@link CompositeByteBuf} with the given maximum number of components that can be stored in it.
-     * If it is a direct or heap buffer depends on the actual implementation.
+     * 分配一个{@link CompositeByteBuf}，其中包含可以存储的给定最大组件数。是直接缓冲区还是堆缓冲区取决于实际实现。
      */
     CompositeByteBuf compositeBuffer(int maxNumComponents);
 
     /**
-     * Allocate a heap {@link CompositeByteBuf}.
+     * 分配堆{@link CompositeByteBuf}。
      */
     CompositeByteBuf compositeHeapBuffer();
 
     /**
-     * Allocate a heap {@link CompositeByteBuf} with the given maximum number of components that can be stored in it.
+     * 分配给堆{@link CompositeByteBuf}，其中包含给定的最大可以存储在其中的组件数量。
      */
     CompositeByteBuf compositeHeapBuffer(int maxNumComponents);
 
     /**
-     * Allocate a direct {@link CompositeByteBuf}.
+     * 分配直接的{@link CompositeByteBuf}。
      */
     CompositeByteBuf compositeDirectBuffer();
 
     /**
-     * Allocate a direct {@link CompositeByteBuf} with the given maximum number of components that can be stored in it.
+     * 分配一个直接的{@link CompositeByteBuf}，其中包含可以存储的给定最大组件数。
      */
     CompositeByteBuf compositeDirectBuffer(int maxNumComponents);
 
     /**
-     * Returns {@code true} if direct {@link ByteBuf}'s are pooled
+     * 如果直接的{@link ByteBuf}被池化，则返回{@code true}
      */
     boolean isDirectBufferPooled();
 
     /**
-     * Calculate the new capacity of a {@link ByteBuf} that is used when a {@link ByteBuf} needs to expand by the
-     * {@code minNewCapacity} with {@code maxCapacity} as upper-bound.
+     *计算当{@link ByteBuf}需要扩展{@code minNewCapacity}且上限为{@code maxCapacity}时使用的{@link ByteBuf}的新容量。
      */
     int calculateNewCapacity(int minNewCapacity, int maxCapacity);
  }

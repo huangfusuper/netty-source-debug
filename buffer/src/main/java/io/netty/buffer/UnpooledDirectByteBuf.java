@@ -61,6 +61,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         this.alloc = alloc;
+        //创建一个 ByteBuffer 堆外内存 并保存
         setByteBuffer(allocateDirect(initialCapacity), false);
     }
 
@@ -111,6 +112,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         PlatformDependent.freeDirectBuffer(buffer);
     }
 
+    /**
+     * 直接保存
+     * @param buffer
+     * @param tryFree
+     */
     void setByteBuffer(ByteBuffer buffer, boolean tryFree) {
         if (tryFree) {
             ByteBuffer oldBuffer = this.buffer;

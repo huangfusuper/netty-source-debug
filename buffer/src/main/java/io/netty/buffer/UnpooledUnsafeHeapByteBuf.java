@@ -47,6 +47,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     protected byte _getByte(int index) {
+        //这里将之前保存的数组传递过去  还有数据的索引
         return UnsafeByteBufUtil.getByte(array, index);
     }
 

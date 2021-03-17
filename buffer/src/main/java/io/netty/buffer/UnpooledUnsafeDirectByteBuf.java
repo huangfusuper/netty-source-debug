@@ -66,6 +66,7 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
     @Override
     final void setByteBuffer(ByteBuffer buffer, boolean tryFree) {
         super.setByteBuffer(buffer, tryFree);
+        //保存这个堆外内存再内存里面的地址
         memoryAddress = PlatformDependent.directBufferAddress(buffer);
     }
 
@@ -88,6 +89,7 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected byte _getByte(int index) {
+        //根据基地址 + 偏移量
         return UnsafeByteBufUtil.getByte(addr(index));
     }
 

@@ -77,16 +77,26 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
                 && PlatformDependent.hasDirectBufferNoCleanerConstructor();
     }
 
+    /**
+     * 这两种数据分配器虽然不一样  但是调用的都是体哦那个一个 构造方法  内部都是通过字节数组的方式实现的数据存储 但是取数据的时候不一样
+     * _getByte一个是直接通过索引下标返回数据  一个是直接基于基准地址 + 偏移量获取再内存中的位置获取数据
+     * @param initialCapacity
+     * @param maxCapacity
+     * @return
+     */
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
         return PlatformDependent.hasUnsafe() ?
+                //InstrumentedUnpooledUnsafeHeapByteBuf  非池化的的堆内内存
                 new InstrumentedUnpooledUnsafeHeapByteBuf(this, initialCapacity, maxCapacity) :
+                //InstrumentedUnpooledUnsafeHeapByteBuf 是一个非复用的堆内内存  这里不使用jdk底层的 unsafe来获取数据而是通过索引 + byte数组的方式
                 new InstrumentedUnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         final ByteBuf buf;
+        //判断是否又unsafe这个对象
         if (PlatformDependent.hasUnsafe()) {
             buf = noCleaner ? new InstrumentedUnpooledUnsafeNoCleanerDirectByteBuf(this, initialCapacity, maxCapacity) :
                     new InstrumentedUnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);

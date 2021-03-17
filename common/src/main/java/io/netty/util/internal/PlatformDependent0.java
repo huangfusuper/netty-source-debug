@@ -522,6 +522,7 @@ final class PlatformDependent0 {
     }
 
     static byte getByte(byte[] data, int index) {
+        //底层通过unsafe来实现从内存中获取数据   data 是数组 BYTE_ARRAY_BASE_OFFSET是基准地址  index是偏移量
         return UNSAFE.getByte(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
 

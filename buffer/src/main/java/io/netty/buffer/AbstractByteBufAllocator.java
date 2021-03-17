@@ -97,15 +97,18 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
      *                     a heap buffer
      */
     protected AbstractByteBufAllocator(boolean preferDirect) {
+        //查看jdk的底层是否存在unsafe
         directByDefault = preferDirect && PlatformDependent.hasUnsafe();
         emptyBuf = new EmptyByteBuf(this);
     }
 
     @Override
     public ByteBuf buffer() {
+        //存在unsafe 就分配堆外内存
         if (directByDefault) {
             return directBuffer();
         }
+        //堆内内存
         return heapBuffer();
     }
 
@@ -170,6 +173,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public ByteBuf directBuffer() {
+        //初始化容量和最大容量
         return directBuffer(DEFAULT_INITIAL_CAPACITY, DEFAULT_MAX_CAPACITY);
     }
 
@@ -184,6 +188,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
             return emptyBuf;
         }
         validate(initialCapacity, maxCapacity);
+        //子类又 polled和Unpolled
         return newDirectBuffer(initialCapacity, maxCapacity);
     }
 
