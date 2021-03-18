@@ -149,12 +149,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     //// 将 Channel 中的数据读到 ByteBuf 中
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
-                        // nothing was read. release the buffer.
+                        // 什么都没读。释放缓冲区。
                         byteBuf.release();
                         byteBuf = null;
                         close = allocHandle.lastBytesRead() < 0;
                         if (close) {
-                            // There is nothing left to read as we received an EOF.
+                            // 当我们收到EOF时，没有什么可阅读的。
                             readPending = false;
                         }
                         break;
