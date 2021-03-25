@@ -536,7 +536,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private void notifyListenersNow() {
         Object listeners;
         synchronized (this) {
-            // Only proceed if there are listeners to notify and we are not already notifying listeners.
+            // 仅在有要通知的侦听器且我们尚未通知侦听器时继续进行。
             if (notifyingListeners || this.listeners == null) {
                 return;
             }

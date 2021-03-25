@@ -1033,6 +1033,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         /**
+         * 将指定的promise标记为成功。 如果promise已经完成，请记录一条消息
          * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
          */
         protected final void safeSetSuccess(ChannelPromise promise) {
