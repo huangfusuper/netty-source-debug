@@ -61,6 +61,7 @@ public class EchoServer {
                     });
             //bind() 才是真正进行服务器端口绑定和启动的入口，sync() 表示阻塞等待服务器启动完成。
             //重点
+            //sync 
             ChannelFuture future = bootstrap.bind().sync();
             future.channel().closeFuture().sync();
         } finally {
