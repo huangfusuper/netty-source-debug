@@ -488,7 +488,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 //实际的注册 注册selector 触发 handlerAdded事件和 channelRegistered事件
                 register0(promise);
             } else {
-                // 外部线程调用
+                // 外部线程调用  这里必定使用外部线程去跑，因为，此时注册器可能处于select阻塞状态，再添加外部线程的时候会调用warkUp唤醒阻塞，然后才能注册上去
                 try {
                     eventLoop.execute(new Runnable() {
                         @Override

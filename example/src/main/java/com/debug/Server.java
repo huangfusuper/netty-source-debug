@@ -17,7 +17,7 @@ public class Server {
 
     public static void main(String[] args) {
         EventLoopGroup boss = new NioEventLoopGroup(1);
-        EventLoopGroup work = new NioEventLoopGroup();
+        EventLoopGroup work = new NioEventLoopGroup(1);
 
         try{
             ServerBootstrap serverBootstrap = new ServerBootstrap();
@@ -45,7 +45,12 @@ public class Server {
 
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
-
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+                                    System.out.println("asdkdkjahdkjhsadkjhsajdkhaskjdhkjsahd");
+                                }
+                            });
                         }
                     });
 

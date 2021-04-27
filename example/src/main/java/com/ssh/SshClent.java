@@ -33,16 +33,16 @@ public class SshClent {
                 });
         ChannelFuture sync = bootstrap.connect().sync();
         Channel channel = sync.channel();
-        ByteBufAllocator alloc = channel.alloc();
-        ByteBuf buffer = alloc.buffer();
-        buffer.writeByte((byte)50);
-        buffer.writeBytes("root".getBytes(StandardCharsets.UTF_8));
-        buffer.writeBytes("ssh-connection".getBytes(StandardCharsets.UTF_8));
-        buffer.writeBytes("password".getBytes(StandardCharsets.UTF_8));
-        buffer.writeByte((byte)0);
-        buffer.writeBytes("123456".getBytes(StandardCharsets.UTF_8));
-        channel.writeAndFlush(buffer);
-        channel.writeAndFlush("ls /");
+//        ByteBufAllocator alloc = channel.alloc();
+//        ByteBuf buffer = alloc.buffer();
+//        buffer.writeByte((byte)50);
+//        buffer.writeBytes("root".getBytes(StandardCharsets.UTF_8));
+//        buffer.writeBytes("ssh-connection".getBytes(StandardCharsets.UTF_8));
+//        buffer.writeBytes("password".getBytes(StandardCharsets.UTF_8));
+//        buffer.writeByte((byte)0);
+//        buffer.writeBytes("123456".getBytes(StandardCharsets.UTF_8));
+//        channel.writeAndFlush(buffer);
+//        channel.writeAndFlush("ls /");
         channel.closeFuture().sync();
     }
 }
