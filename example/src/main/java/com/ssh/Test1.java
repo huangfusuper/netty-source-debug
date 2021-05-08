@@ -6,6 +6,7 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import org.apache.commons.io.IOUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -14,14 +15,22 @@ import java.io.InputStream;
  * @date
  */
 public class Test1 {
-    public static void main(String[] args) throws JSchException, IOException {
-        JSch jSch  = new JSch();
+    public static void main(String[] args) throws Exception {
+
+        JSch jSch = new JSch();
         Session session = jSch.getSession("root", "10.0.55.79", 22);
         session.setConfig("StrictHostKeyChecking", "no");
         session.setPassword("123456");
         session.connect();
-        System.out.println(execCommandByJSch(session, "ls /", "utf-8"));
+        try{
+        listFolderStructure(session, "ls");
+        listFolderStructure(session, "ls");
+        listFolderStructure(session, "ls");
 
+        }finally {
+            session.disconnect();
+
+        }
     }
 
     public static String execCommandByJSch(Session session, String command, String resultEncoding) throws IOException, JSchException {
@@ -35,6 +44,31 @@ public class Test1 {
         channelExec.disconnect();
 
         return result;
+    }
+
+
+    public static void listFolderStructure(Session session, String command) throws Exception {
+
+
+        ChannelExec channel = null;
+        try {
+            channel = (ChannelExec) session.openChannel("exec");
+            channel.setCommand(command);
+            ByteArrayOutputStream responseStream = new ByteArrayOutputStream();
+            channel.setOutputStream(responseStream);
+            channel.connect();
+
+            while (channel.isConnected()) {
+                Thread.sleep(100);
+            }
+
+            String responseString = responseStream.toString();
+            System.out.println(responseString);
+        }finally {
+            if(channel != null) {
+                channel.disconnect();
+            }
+        }
     }
 
 }

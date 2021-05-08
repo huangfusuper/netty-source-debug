@@ -1,8 +1,15 @@
 package com.my_netty.reactor;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
+
 import java.io.IOException;
 import java.nio.channels.*;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 反应器
@@ -16,6 +23,8 @@ public class Reactor implements Runnable {
     public Reactor(Selector selector) {
         this.selector = selector;
     }
+
+    
 
     @Override
     public void run() {

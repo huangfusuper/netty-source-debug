@@ -120,6 +120,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
+
     NioEventLoop(NioEventLoopGroup parent, Executor executor, SelectorProvider selectorProvider,
                  SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler,
                  EventLoopTaskQueueFactory queueFactory) {
@@ -160,15 +161,17 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private SelectorTuple openSelector() {
         final Selector unwrappedSelector;
         try {
+            //获取一个原始的选择器
             unwrappedSelector = provider.openSelector();
         } catch (IOException e) {
             throw new ChannelException("failed to open a new selector", e);
         }
-
+        //禁用优化选项  默认false
         if (DISABLE_KEY_SET_OPTIMIZATION) {
+            //如果不优化那么就直接包装原始的选择器
             return new SelectorTuple(unwrappedSelector);
         }
-
+        //如果需要优化  //反射获取对应的类的对象 SelectorImpl
         Object maybeSelectorImplClass = AccessController.doPrivileged(new PrivilegedAction<Object>() {
             @Override
             public Object run() {
@@ -182,30 +185,39 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
         });
-
+        //如果没有获取成功
         if (!(maybeSelectorImplClass instanceof Class) ||
-                // ensure the current selector implementation is what we can instrument.
+                // 确保当前的选择器实现是我们可以检测到的。  判断是 unwrappedSelector的子类或者同类
                 !((Class<?>) maybeSelectorImplClass).isAssignableFrom(unwrappedSelector.getClass())) {
+            //发生异常
             if (maybeSelectorImplClass instanceof Throwable) {
                 Throwable t = (Throwable) maybeSelectorImplClass;
                 logger.trace("failed to instrument a special java.util.Set into: {}", unwrappedSelector, t);
             }
+            //还是包装为未优化的选择器
             return new SelectorTuple(unwrappedSelector);
         }
-
+        //获取选择器类对象
         final Class<?> selectorImplClass = (Class<?>) maybeSelectorImplClass;
+        //构架一个选择器集合  注意这里是Netty自己实现的，该类继承了一个AbstractSet  内部实现了  add方法   remove方法  iterator方法
+        //Netty为什么要使用数组进行优化呢？
+        //hashset集合是hashMap方法来实现的，this,Object 再添加元素的时候如果发生了hash碰撞的话会遍历hash槽上的链表  算法复杂度为O(n)
+        //但是数组不一样  数组是O(1)  所以Netty官方使用数组来优化选择器事件集合  默认是1024  满了之后2倍扩容
         final SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
-
+        //开始进行反射替换
         Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
             @Override
             public Object run() {
                 try {
+                    //获取选择器事件中的 事件对象 selectedKeys的属性对象
                     Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
+                    //获取公开选择的密钥
                     Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
+                    //java9且存在 Unsafe的情况下 直接替换内存空间的数据
                     if (PlatformDependent.javaVersion() >= 9 && PlatformDependent.hasUnsafe()) {
-                        // Let us try to use sun.misc.Unsafe to replace the SelectionKeySet.
-                        // This allows us to also do this in Java9+ without any extra flags.
+                        // 让我们尝试使用sun.misc.Unsafe替换SelectionKeySet。
+                        // 这使我们也可以在Java9 +中执行此操作，而无需任何额外的标志。
                         long selectedKeysFieldOffset = PlatformDependent.objectFieldOffset(selectedKeysField);
                         long publicSelectedKeysFieldOffset =
                                 PlatformDependent.objectFieldOffset(publicSelectedKeysField);
@@ -217,9 +229,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                                     unwrappedSelector, publicSelectedKeysFieldOffset, selectedKeySet);
                             return null;
                         }
-                        // We could not retrieve the offset, lets try reflection as last-resort.
+                        // 如果没法直接替换内存空间的数据 就想办法用反射
                     }
-
+                    //java8或者java9+上述未操作完成的 使用反射来替换
                     Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField, true);
                     if (cause != null) {
                         return cause;
@@ -228,7 +240,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     if (cause != null) {
                         return cause;
                     }
-
+                    //开始进行替换  将我们创建的优化后的事件数组来反射的替换进选择器中
                     selectedKeysField.set(unwrappedSelector, selectedKeySet);
                     publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
                     return null;
@@ -239,17 +251,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
         });
-
+        //如果发生了异常
         if (maybeException instanceof Exception) {
             selectedKeys = null;
             Exception e = (Exception) maybeException;
             logger.trace("failed to instrument a special java.util.Set into: {}", unwrappedSelector, e);
             return new SelectorTuple(unwrappedSelector);
         }
+        //直接将该selectedSet保存为成员变量后续直接使用
         selectedKeys = selectedKeySet;
         logger.trace("instrumented a special java.util.Set into: {}", unwrappedSelector);
-        return new SelectorTuple(unwrappedSelector,
-                new SelectedSelectionKeySetSelector(unwrappedSelector, selectedKeySet));
+        //包装为 SelectorTuple  注意这里的选择器已经被包装了 SelectedSelectionKeySetSelector
+        return new SelectorTuple(unwrappedSelector, new SelectedSelectionKeySetSelector(unwrappedSelector, selectedKeySet));
     }
 
     /**
@@ -467,6 +480,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                                 //2. 如果有异步任务的话 就不进行阻塞或者只阻塞很短的一段的时间进行io时间的返回 后续基于io事件的数量进行操作！
                                 if (!hasTasks()) {
                                     //选择 返回对应的通道数量  这里阻塞
+                                    //阻塞的时候为什么能够注册上去，知道吗？
+                                    //因为在每次异步任务添加任务的时候，都会warkUp一次，放开阻塞！然后开始执行异步任务，异步任务又去开始进行注册，注意此时服务通道并没有阻塞，等待异步任务执行完毕后，回到select()状态，发现有一个注册信息，选择器就会立即放开阻塞，开始执行注册信息！这就是他不阻塞的原因！
                                     strategy = select(curDeadlineNanos);
                                 }
                             } finally {
