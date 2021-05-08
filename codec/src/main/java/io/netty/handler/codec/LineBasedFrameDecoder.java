@@ -81,6 +81,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
 
     @Override
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        //真正的解码实现
         Object decoded = decode(ctx, in);
         if (decoded != null) {
             out.add(decoded);
@@ -96,28 +97,39 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
      *                          be created.
      */
     protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        //查找行尾  返回\n或者\r的位置
         final int eol = findEndOfLine(buffer);
         if (!discarding) {
+            //存在结尾
             if (eol >= 0) {
                 final ByteBuf frame;
+                //结尾位置 - 都指针位置  = 有效数据长度
                 final int length = eol - buffer.readerIndex();
+                //如果当前索引下指向的是\r证明是以\r\n开头的   结尾数据占两个字节否则占用一个
                 final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
-
+                //如果有效数据长度大于预设长度进行报错和丢弃
                 if (length > maxLength) {
+                    //重新指定读指针的位置
                     buffer.readerIndex(eol + delimLength);
+                    //进行报错
                     fail(ctx, length);
                     return null;
                 }
-
+                //是否丢弃换行符
                 if (stripDelimiter) {
+                    //如果设置为丢弃 则从当前都指针位置切片 并增加引用计数
+                    //相当于调用了readSlice().retain()
                     frame = buffer.readRetainedSlice(length);
+                    //跳过换行符  \n跳过一个  \r\n跳过两个
                     buffer.skipBytes(delimLength);
                 } else {
+                    //从当前的读指针位置读取  有效数据长度+换行数据长度的位置
                     frame = buffer.readRetainedSlice(length + delimLength);
                 }
-
+                //返回这个切片
                 return frame;
             } else {
+                //当前有效数据
                 final int length = buffer.readableBytes();
                 if (length > maxLength) {
                     discardedBytes = length;
@@ -128,6 +140,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
                         fail(ctx, "over " + discardedBytes);
                     }
                 }
+                //不做处理
                 return null;
             }
         } else {
@@ -161,18 +174,24 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     /**
-     * Returns the index in the buffer of the end of line found.
-     * Returns -1 if no end of line was found in the buffer.
+     * 返回找到的行尾缓冲区中的索引。
+     * 如果在缓冲区中未找到行尾，则返回-1。
      */
     private int findEndOfLine(final ByteBuf buffer) {
+        //获取可读字节的长度
         int totalLength = buffer.readableBytes();
+        //从当前读指针+偏移量的位置查询到最大可读数-偏移量的位置  查询\n
         int i = buffer.forEachByte(buffer.readerIndex() + offset, totalLength - offset, ByteProcessor.FIND_LF);
+        //如果存在\n
         if (i >= 0) {
+            //初始化偏移量
             offset = 0;
+            //如果换行符的前一位是\r 就返回\r的位置
             if (i > 0 && buffer.getByte(i - 1) == '\r') {
                 i--;
             }
         } else {
+            //没查询到就记录一个当前的偏移量将偏移量移动到数据末尾等待下一次数据过来在读
             offset = totalLength;
         }
         return i;
