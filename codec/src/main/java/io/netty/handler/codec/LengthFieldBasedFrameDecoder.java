@@ -455,7 +455,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         if (frameLength < lengthFieldEndOffset) {
             failOnFrameLengthLessThanLengthFieldEndOffset(in, frameLength, lengthFieldEndOffset);
         }
-        //如果本次读取的字节数大于最大长度
+        //如果本次读取的字节数大于最大长度  最大长度 弟弟
         if (frameLength > maxFrameLength) {
             exceededFrameLength(in, frameLength);
             return null;

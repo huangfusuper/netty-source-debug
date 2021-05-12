@@ -40,7 +40,13 @@ final class ChannelHandlerMask {
      * 以下是方法代表的掩码值
      */
     static final int MASK_EXCEPTION_CAUGHT = 1;
+    /**
+     * channelRegistered方法的掩码
+     */
     static final int MASK_CHANNEL_REGISTERED = 1 << 1;
+    /**
+     * channelUnregistered方法的掩码
+     */
     static final int MASK_CHANNEL_UNREGISTERED = 1 << 2;
     static final int MASK_CHANNEL_ACTIVE = 1 << 3;
     static final int MASK_CHANNEL_INACTIVE = 1 << 4;

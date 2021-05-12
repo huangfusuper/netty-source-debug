@@ -78,19 +78,28 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
      */
     public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
+        /**
+         *
+         * @param alloc
+         * @param cumulation 上一次的
+         * @param in 本次的
+         * @return 合并后的
+         */
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
             try {
+                //可读书勋贵
                 final int required = in.readableBytes();
+                //判断合并属性是否需要扩容
                 if (required > cumulation.maxWritableBytes() ||
                         (required > cumulation.maxFastWritableBytes() && cumulation.refCnt() > 1) ||
                         cumulation.isReadOnly()) {
-                    // Expand cumulation (by replacing it) under the following conditions:
-                    // - cumulation cannot be resized to accommodate the additional data
-                    // - cumulation can be expanded with a reallocation operation to accommodate but the buffer is
-                    //   assumed to be shared (e.g. refCnt() > 1) and the reallocation may not be safe.
+                    //在以下情况下扩展累积量（通过替换它）：
+                    // -无法调整累积量的大小以容纳其他数据
+                    // -可以使用重新分配操作扩展累积量以容纳但假定缓冲区是共享的（例如refCnt（）> 1），并且重新分配可能并不安全。
                     return expandCumulation(alloc, cumulation, in);
                 }
+                //直接写
                 return cumulation.writeBytes(in);
             } finally {
                 // We must release in in all cases as otherwise it may produce a leak if writeBytes(...) throw
@@ -258,16 +267,22 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        //判断是否需要解码  否则直接向下传播
         if (msg instanceof ByteBuf) {
+            //创建一个集合
             CodecOutputList out = CodecOutputList.newInstance();
             try {
                 ByteBuf data = (ByteBuf) msg;
+                //判断合并属性是否为空 为什么判断这个呢？  因为上一次可能由没有满足条件的数据没有被解码
                 first = cumulation == null;
                 if (first) {
+                    //没有
                     cumulation = data;
                 } else {
+                    //将上一次的数据与这一次的数据合并
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
                 }
+                //开始解码
                 callDecode(ctx, cumulation, out);
             } catch (DecoderException e) {
                 throw e;
@@ -412,9 +427,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         try {
             while (in.isReadable()) {
                 int outSize = out.size();
-
+                //存在已经解码完成的数据
                 if (outSize > 0) {
+                    //向下啊传播过去
                     fireChannelRead(ctx, out, outSize);
+                    //清空
                     out.clear();
 
                     // Check if this handler was removed before continuing with decoding.
@@ -422,13 +439,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     //
                     // See:
                     // - https://github.com/netty/netty/issues/4635
+                    //如果被删除了 就跳过
                     if (ctx.isRemoved()) {
                         break;
                     }
                     outSize = 0;
                 }
-
+                //记录一个当前的可读数据
                 int oldInputLength = in.readableBytes();
+                //开始调用子类 解码数据
                 decodeRemovalReentryProtection(ctx, in, out);
 
                 // Check if this handler was removed before continuing the loop.
@@ -438,15 +457,19 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 if (ctx.isRemoved()) {
                     break;
                 }
-
+                //true: 没有解析出来数据
+                //false：解析出来数据了
                 if (outSize == out.size()) {
+                    //没有解析出来数据 就判断之前的可读数据和当前的可读数据是否一致  ，如果一致就证明压根数据就不够，就不处理了
                     if (oldInputLength == in.readableBytes()) {
                         break;
                     } else {
+                        //如果数据被读过  就跳过本次下次接着读
                         continue;
                     }
                 }
-
+                //没读取任何东西，但解码了一条消息。
+                //能走到这 outSize的值必定发生了改变，但是可读字节数却没有发生改变！
                 if (oldInputLength == in.readableBytes()) {
                     throw new DecoderException(
                             StringUtil.simpleClassName(getClass()) +
@@ -490,6 +513,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             throws Exception {
         decodeState = STATE_CALLING_CHILD_DECODE;
         try {
+            //子类开始解码
             decode(ctx, in, out);
         } finally {
             boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
@@ -518,11 +542,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     private static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf oldCumulation, ByteBuf in) {
+        //重新分配一个
         ByteBuf newCumulation = alloc.buffer(alloc.calculateNewCapacity(
                 oldCumulation.readableBytes() + in.readableBytes(), MAX_VALUE));
         ByteBuf toRelease = newCumulation;
         try {
+            //将上次的
             newCumulation.writeBytes(oldCumulation);
+            //本次的
             newCumulation.writeBytes(in);
             toRelease = oldCumulation;
             return newCumulation;

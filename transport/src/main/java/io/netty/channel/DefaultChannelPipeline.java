@@ -448,34 +448,34 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return (T) remove((AbstractChannelHandlerContext) ctx).handler();
     }
 
-    private AbstractChannelHandlerContext remove(final AbstractChannelHandlerContext ctx) {
-        assert ctx != head && ctx != tail;
+        private AbstractChannelHandlerContext remove(final AbstractChannelHandlerContext ctx) {
+            assert ctx != head && ctx != tail;
 
-        synchronized (this) {
-            atomicRemoveFromHandlerList(ctx);
+            synchronized (this) {
+                atomicRemoveFromHandlerList(ctx);
 
-            // If the registered is false it means that the channel was not registered on an eventloop yet.
-            // In this case we remove the context from the pipeline and add a task that will call
-            // ChannelHandler.handlerRemoved(...) once the channel is registered.
-            if (!registered) {
-                callHandlerCallbackLater(ctx, false);
-                return ctx;
+                // If the registered is false it means that the channel was not registered on an eventloop yet.
+                // In this case we remove the context from the pipeline and add a task that will call
+                // ChannelHandler.handlerRemoved(...) once the channel is registered.
+                if (!registered) {
+                    callHandlerCallbackLater(ctx, false);
+                    return ctx;
+                }
+
+                EventExecutor executor = ctx.executor();
+                if (!executor.inEventLoop()) {
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            callHandlerRemoved0(ctx);
+                        }
+                    });
+                    return ctx;
+                }
             }
-
-            EventExecutor executor = ctx.executor();
-            if (!executor.inEventLoop()) {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        callHandlerRemoved0(ctx);
-                    }
-                });
-                return ctx;
-            }
+            callHandlerRemoved0(ctx);
+            return ctx;
         }
-        callHandlerRemoved0(ctx);
-        return ctx;
-    }
 
     /**
      * Method is synchronized to make the handler removal from the double linked list atomic.
