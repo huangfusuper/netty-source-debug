@@ -54,7 +54,7 @@ final class PoolThreadCache {
     private final MemoryRegionCache<byte[]>[] normalHeapCaches;
     private final MemoryRegionCache<ByteBuffer>[] normalDirectCaches;
 
-    // Used for bitshifting when calculate the index of normal caches later
+    // 稍后计算普通缓存的索引时用于移位
     private final int numShiftsNormalDirect;
     private final int numShiftsNormalHeap;
     private final int freeSweepAllocationThreshold;

@@ -37,7 +37,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         Small,
         Normal
     }
-
+    //32
     static final int numTinySubpagePools = 512 >>> 4;
 
     final PooledByteBufAllocator parent;
@@ -50,14 +50,24 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     final int numSmallSubpagePools;
     final int directMemoryCacheAlignment;
     final int directMemoryCacheAlignmentMask;
-    private final PoolSubpage<T>[] tinySubpagePools;
-    private final PoolSubpage<T>[] smallSubpagePools;
+    private final PoolSubpage<T>[] tinySubpagePools; //32
+    private final PoolSubpage<T>[] smallSubpagePools; //4
 
+    //                --->        --->         --->       --->
+    //qInit  --> q000        q025         q050        q075        q100
+    //                <---        <---         <---       <---
+    //内存是用率
+    //50-100
     private final PoolChunkList<T> q050;
+    //25-75
     private final PoolChunkList<T> q025;
+    //1-50
     private final PoolChunkList<T> q000;
+    //0-25
     private final PoolChunkList<T> qInit;
+    //75-100
     private final PoolChunkList<T> q075;
+    //100
     private final PoolChunkList<T> q100;
 
     private final List<PoolChunkListMetric> chunkListMetrics;
@@ -85,6 +95,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     protected PoolArena(PooledByteBufAllocator parent, int pageSize,
           int maxOrder, int pageShifts, int chunkSize, int cacheAlignment) {
+        //从PooledByteBufAllocator中传送过来的相关字段值。
         this.parent = parent;
         this.pageSize = pageSize;
         this.maxOrder = maxOrder;
@@ -92,6 +103,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         this.chunkSize = chunkSize;
         directMemoryCacheAlignment = cacheAlignment;
         directMemoryCacheAlignmentMask = cacheAlignment - 1;
+        //该变量用于判断申请的内存大小与page之间的关系，是大于，还是小于
         subpageOverflowMask = ~(pageSize - 1);
         tinySubpagePools = newSubpagePoolArray(numTinySubpagePools);
         for (int i = 0; i < tinySubpagePools.length; i ++) {
@@ -174,21 +186,25 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
+        //规范化容量 第一是向上取规范容量并返回
         final int normCapacity = normalizeCapacity(reqCapacity);
-        if (isTinyOrSmall(normCapacity)) { // capacity < pageSize
+        // capacity < pageSize   分配内存小于8k
+        if (isTinyOrSmall(normCapacity)) {
             int tableIdx;
             PoolSubpage<T>[] table;
             boolean tiny = isTiny(normCapacity);
             if (tiny) { // < 512
+                //缓存上分配
                 if (cache.allocateTiny(this, buf, reqCapacity, normCapacity)) {
-                    // was able to allocate out of the cache so move on
+                    // 能够分配出缓存，所以继续
                     return;
                 }
+                //除16
                 tableIdx = tinyIdx(normCapacity);
                 table = tinySubpagePools;
             } else {
                 if (cache.allocateSmall(this, buf, reqCapacity, normCapacity)) {
-                    // was able to allocate out of the cache so move on
+                    // 能够分配出缓存，所以继续
                     return;
                 }
                 tableIdx = smallIdx(normCapacity);
@@ -213,18 +229,23 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 }
             }
             synchronized (this) {
+                //直接分配
                 allocateNormal(buf, reqCapacity, normCapacity);
             }
 
             incTinySmallAllocation(tiny);
             return;
         }
+
+        //这里分配的是page  <= 16M
         if (normCapacity <= chunkSize) {
+            //
             if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
                 // was able to allocate out of the cache so move on
                 return;
             }
             synchronized (this) {
+                //实际的内存分配
                 allocateNormal(buf, reqCapacity, normCapacity);
                 ++allocationsNormal;
             }
@@ -236,16 +257,19 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     // Method must be called inside synchronized(this) { ... } block
     private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+        //大于8k  从q050开始  链表上没有对应的PoolChunk
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
             q075.allocate(buf, reqCapacity, normCapacity)) {
             return;
         }
 
-        // Add a new chunk.
+        // 添加一个新的块。  创建PoolChunk  内涵平衡二叉树
         PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
+        //使用 PoolChunk进行分配内存  给ByteBuf
         boolean success = c.allocate(buf, reqCapacity, normCapacity);
         assert success;
+        //将 PoolChunk 追加进 qInit队列
         qInit.add(c);
     }
 

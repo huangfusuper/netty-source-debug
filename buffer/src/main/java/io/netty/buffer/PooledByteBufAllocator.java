@@ -38,13 +38,33 @@ import java.util.concurrent.TimeUnit;
 public class PooledByteBufAllocator extends AbstractByteBufAllocator implements ByteBufAllocatorMetricProvider {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
+    /**
+     * 默认的PoolArena个数，堆内存类型
+     */
     private static final int DEFAULT_NUM_HEAP_ARENA;
+    /**
+     * 默认的PoolArena个数，直接内存类型
+     */
     private static final int DEFAULT_NUM_DIRECT_ARENA;
-
+    /**
+     * 默认的Page的个数，最小为4K,默认为8K
+     */
     private static final int DEFAULT_PAGE_SIZE;
+    /**
+     * 由于每个chunk中的page是用平衡二叉树映射管理每个PoolSubpage是否被分配，maxOrder为树的深度，深度为maxOrder层的节点数量为 1 << maxOrder。
+     */
     private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk
+    /**
+     *  默认的tiny cache 的大小   512
+     */
     private static final int DEFAULT_TINY_CACHE_SIZE;
+    /**
+     * 默认的small cache的大小   256
+     */
     private static final int DEFAULT_SMALL_CACHE_SIZE;
+    /**
+     * 默认的normal cache的大小  64
+     */
     private static final int DEFAULT_NORMAL_CACHE_SIZE;
     private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
     private static final int DEFAULT_CACHE_TRIM_INTERVAL;
@@ -52,8 +72,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     private static final boolean DEFAULT_USE_CACHE_FOR_ALL_THREADS;
     private static final int DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT;
     static final int DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK;
-
+    /**
+     * page容量的最小值，为4K。
+     */
     private static final int MIN_PAGE_SIZE = 4096;
+    /**
+     * 最大chunk的大小，等于2的30次方，即1G。
+     */
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
 
     private final Runnable trimTask = new Runnable() {
@@ -64,17 +89,19 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     };
 
     static {
-        int defaultPageSize = SystemPropertyUtil.getInt("io.netty.allocator.pageSize", 8192);
+        int defaultPageSize = SystemPropertyUtil.getInt("io.netty.allocator.pageSize", 8192);//8192
         Throwable pageSizeFallbackCause = null;
         try {
+            //检查pageSize是否大于MIN_PAGE_SIZE（4K）且是2的幂次方。
             validateAndCalculatePageShifts(defaultPageSize);
         } catch (Throwable t) {
             pageSizeFallbackCause = t;
             defaultPageSize = 8192;
         }
+        //对DEFAULT_PAGE_SIZE进行初始化，默认是8K，用户可以通过设置io.netty.allocator.pageSize来设置。
         DEFAULT_PAGE_SIZE = defaultPageSize;
 
-        int defaultMaxOrder = SystemPropertyUtil.getInt("io.netty.allocator.maxOrder", 11);
+        int defaultMaxOrder = SystemPropertyUtil.getInt("io.netty.allocator.maxOrder", 11);//11
         Throwable maxOrderFallbackCause = null;
         try {
             validateAndCalculateChunkSize(DEFAULT_PAGE_SIZE, defaultMaxOrder);
@@ -82,21 +109,26 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             maxOrderFallbackCause = t;
             defaultMaxOrder = 11;
         }
+        //对树的深度进行初始化，默认是11，用户可以通过io.netty.allocator.maxOrder来进行设置。
         DEFAULT_MAX_ORDER = defaultMaxOrder;
 
-        // Determine reasonable default for nHeapArena and nDirectArena.
-        // Assuming each arena has 3 chunks, the pool should not consume more than 50% of max memory.
+        // 为nHeapArena和nDirectArena确定合理的默认值。
+        // 假设每个竞技场有3个块，则该池消耗的内存不应超过最大内存的50％。
         final Runtime runtime = Runtime.getRuntime();
 
         /*
-         * We use 2 * available processors by default to reduce contention as we use 2 * available processors for the
-         * number of EventLoops in NIO and EPOLL as well. If we choose a smaller number we will run into hot spots as
-         * allocation and de-allocation needs to be synchronized on the PoolArena.
+         *默认情况下，我们使用2个可用处理器来减少争用，
+         * 因为我们在NIO和EPOLL中也使用2个可用处理器来处理EventLoop。
+         * 如果选择较小的数量，则将遇到热点，因为需要在PoolArena上同步分配和取消分配。
          *
          * See https://github.com/netty/netty/issues/3888.
          */
         final int defaultMinNumArena = NettyRuntime.availableProcessors() * 2;
+        //初始化默认chunk的大小，为PageSize * （2 的 maxOrder幂）。
         final int defaultChunkSize = DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER;
+        //计算PoolAreana的个数，PoolArena默认为： cpu核心线程数 与 最大堆内存/2/（3*chunkSize） 这两个数中的较小者。
+        // 这里的除以2是为了确保系统分配的所有PoolArena占用的内存不超过系统可用内存的一半，
+        // 这里的除以3是为了保证每个PoolArena至少可以由3个PoolChunk组成。
         DEFAULT_NUM_HEAP_ARENA = Math.max(0,
                 SystemPropertyUtil.getInt(
                         "io.netty.allocator.numHeapArenas",
@@ -115,12 +147,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         DEFAULT_SMALL_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.smallCacheSize", 256);
         DEFAULT_NORMAL_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.normalCacheSize", 64);
 
-        // 32 kb is the default maximum capacity of the cached buffer. Similar to what is explained in
-        // 'Scalable memory allocation using jemalloc'
+        // 32 kb是缓存缓冲区的默认最大容量。与“使用jemalloc进行可伸缩内存分配”中解释的内容类似
         DEFAULT_MAX_CACHED_BUFFER_CAPACITY = SystemPropertyUtil.getInt(
                 "io.netty.allocator.maxCachedBufferCapacity", 32 * 1024);
 
-        // the number of threshold of allocations when cached entries will be freed up if not frequently used
+        // 如果不经常使用将释放缓存的条目时的分配阈值数
         DEFAULT_CACHE_TRIM_INTERVAL = SystemPropertyUtil.getInt(
                 "io.netty.allocator.cacheTrimInterval", 8192);
 
@@ -133,8 +164,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT = SystemPropertyUtil.getInt(
                 "io.netty.allocator.directMemoryCacheAlignment", 0);
 
-        // Use 1023 by default as we use an ArrayDeque as backing storage which will then allocate an internal array
-        // of 1024 elements. Otherwise we would allocate 2048 and only use 1024 which is wasteful.
+        // 默认情况下使用1023，因为我们使用ArrayDeque作为后备存储，然后将分配内部数组
+        // 的1024个元素。否则，我们将分配2048，而仅使用1024，这是浪费的。
         DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK = SystemPropertyUtil.getInt(
                 "io.netty.allocator.maxCachedByteBuffersPerChunk", 1023);
 
@@ -174,7 +205,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     private final int normalCacheSize;
     private final List<PoolArenaMetric> heapArenaMetrics;
     private final List<PoolArenaMetric> directArenaMetrics;
-    //类似于 ThreadLocal对象
+    /**
+     * 类似于 ThreadLocal对象
+     */
     private final PoolThreadLocalCache threadCache;
     private final int chunkSize;
     private final PooledByteBufAllocatorMetric metric;
@@ -227,10 +260,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                                   boolean useCacheForAllThreads, int directMemoryCacheAlignment) {
         super(preferDirect);
+        //使用new PoolThreadLocalCache()实例化了threadCache 字段。
         threadCache = new PoolThreadLocalCache(useCacheForAllThreads);
+        //使用了默认的值初始化了tinyCacheSize、smallCacheSize、normalCacheSize
         this.tinyCacheSize = tinyCacheSize;
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
+        //得到chunkSize，其值为：pageSize*2^maxOrder
         chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
 
         checkPositiveOrZero(nHeapArena, "nHeapArena");
@@ -245,14 +281,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             throw new IllegalArgumentException("directMemoryCacheAlignment: "
                     + directMemoryCacheAlignment + " (expected: power of two)");
         }
-
+        //13
         int pageShifts = validateAndCalculatePageShifts(pageSize);
-
+        //实例化了如下两个数组。  PoolArena<byte[]>[] heapArenas;     PoolArena<ByteBuffer>[] directArenas;
         if (nHeapArena > 0) {
             //创建一个 PoolArena数组
             heapArenas = newArenaArray(nHeapArena);
             List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(heapArenas.length);
             for (int i = 0; i < heapArenas.length; i ++) {
+                //堆上内存分配竞技场床架
                 PoolArena.HeapArena arena = new PoolArena.HeapArena(this,
                         pageSize, maxOrder, pageShifts, chunkSize,
                         directMemoryCacheAlignment);
@@ -288,6 +325,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     private static int validateAndCalculatePageShifts(int pageSize) {
+        //检查了pageSize是否大于4K且为2的幂次方，如果不是则抛异常。
         if (pageSize < MIN_PAGE_SIZE) {
             throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: " + MIN_PAGE_SIZE + ")");
         }
@@ -296,7 +334,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: power of 2)");
         }
 
-        // Logarithm base 2. At this point we know that pageSize is a power of two.
+        /**
+         * 对数以2为底。至此，我们知道pageSize是2的幂。
+         * 假设pageSize为8192, 2的13次方的二进制码为：（0000 0000 0000 0000 0010 0000 0000 0000），
+         * 其补码与原码一样，而Integer.numberOfLeadingZeros返回pageSize的补码最高位的1的左边连续零的个数。
+         * 而8192的二进制的高位有18个0，因此pageShifts为13。简单来说pageShifts=log(pageSize)。
+         */
         return Integer.SIZE - 1 - Integer.numberOfLeadingZeros(pageSize);
     }
 

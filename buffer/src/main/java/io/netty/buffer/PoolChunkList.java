@@ -31,7 +31,9 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     private static final Iterator<PoolChunkMetric> EMPTY_METRICS = Collections.<PoolChunkMetric>emptyList().iterator();
     private final PoolArena<T> arena;
     private final PoolChunkList<T> nextList;
+    //小于这个前移
     private final int minUsage;
+    //大于这个后移
     private final int maxUsage;
     private final int maxCapacity;
     private PoolChunk<T> head;
@@ -78,15 +80,19 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
     boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if (normCapacity > maxCapacity) {
-            // Either this PoolChunkList is empty or the requested capacity is larger then the capacity which can
-            // be handled by the PoolChunks that are contained in this PoolChunkList.
+            // 该PoolChunkList为空或所请求的容量大于该容量，则可以
+            // 由此PoolChunkList中包含的PoolChunks处理。
             return false;
         }
-
+        //从头结点向下寻找
         for (PoolChunk<T> cur = head; cur != null; cur = cur.next) {
+            //分配内存  看是否能分配成功
             if (cur.allocate(buf, reqCapacity, normCapacity)) {
+                //分配成功 查看内存使用率是否是超过了当前的最大限制
                 if (cur.usage() >= maxUsage) {
+                    //从当前双向链表删除该节点
                     remove(cur);
+                    //加入到下一个双向链表
                     nextList.add(cur);
                 }
                 return true;

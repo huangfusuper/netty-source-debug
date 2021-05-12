@@ -19,19 +19,25 @@ package io.netty.buffer;
 final class PoolSubpage<T> implements PoolSubpageMetric {
 
     final PoolChunk<T> chunk;
+    //对应满二叉树的下标
     private final int memoryMapIdx;
+    //poolSubpage在PollChunk中memory的偏移量
     private final int runOffset;
     private final int pageSize;
+    //记录每个小内存块的状态
     private final long[] bitmap;
-
+    //与PoolArena中tinySubpagePools或smallSubpagePools中元素链接成双向链表
     PoolSubpage<T> prev;
     PoolSubpage<T> next;
 
     boolean doNotDestroy;
+    //每个小内存块的大小
     int elemSize;
+    //最多可以存放多少小内存块 8K/elemSize
     private int maxNumElems;
     private int bitmapLength;
     private int nextAvail;
+    //可用于分配的内存块个数
     private int numAvail;
 
     // TODO: Test if adding padding helps under contention
@@ -134,7 +140,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             return false;
         }
     }
-
+    //追加到链表
     private void addToPool(PoolSubpage<T> head) {
         assert prev == null && next == null;
         prev = head;
