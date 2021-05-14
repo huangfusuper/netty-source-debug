@@ -25,6 +25,8 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     private final int runOffset;
     private final int pageSize;
     //记录每个小内存块的状态
+    //分配的个数 / 64  = 位图
+    //每次使用对应位图上的64位二进制赋值1  直到64位全部变为1 再向后移
     private final long[] bitmap;
     //与PoolArena中tinySubpagePools或smallSubpagePools中元素链接成双向链表
     PoolSubpage<T> prev;
@@ -61,22 +63,25 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         bitmap = new long[pageSize >>> 10]; // pageSize / 16 / 64
         init(head, elemSize);
     }
-
+    //初始化PoolSubpage
     void init(PoolSubpage<T> head, int elemSize) {
         doNotDestroy = true;
         this.elemSize = elemSize;
         if (elemSize != 0) {
+            //8k / 分配的大小 = 等分为多少份
             maxNumElems = numAvail = pageSize / elemSize;
             nextAvail = 0;
+            //除64  long为64位0
             bitmapLength = maxNumElems >>> 6;
             if ((maxNumElems & 63) != 0) {
                 bitmapLength ++;
             }
-
+            //初始化 bitmap
             for (int i = 0; i < bitmapLength; i ++) {
                 bitmap[i] = 0;
             }
         }
+        //将这个page添加到链表
         addToPool(head);
     }
 
@@ -91,13 +96,15 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         if (numAvail == 0 || !doNotDestroy) {
             return -1;
         }
-
+        // 在 bitmap 中找到第一个索引段，然后将该 bit 置为 1
         final int bitmapIdx = getNextAvail();
+        // 定位到 bitmap 的数组下标
         int q = bitmapIdx >>> 6;
+        // 取到节点对应一个 long 类型中的二进制位
         int r = bitmapIdx & 63;
         assert (bitmap[q] >>> r & 1) == 0;
         bitmap[q] |= 1L << r;
-
+        // 如果 PoolSubpage 没有可分配的内存块，从 PoolArena 双向链表中删除
         if (-- numAvail == 0) {
             removeFromPool();
         }

@@ -266,7 +266,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         this.tinyCacheSize = tinyCacheSize;
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
-        //得到chunkSize，其值为：pageSize*2^maxOrder
+        //得到chunkSize，其值为：pageSize*2^maxOrder    16M
         chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
 
         checkPositiveOrZero(nHeapArena, "nHeapArena");

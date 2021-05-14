@@ -21,7 +21,7 @@ public class MyByteToMessage extends ByteToMessageCodec<Integer> {
      */
     @Override
     protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception {
-        System.out.println("-------数据编码，将" + msg + "编码为bytebuf");
+        //System.out.println("-------数据编码，将" + msg + "编码为bytebuf");
         out.writeInt(msg);
     }
 
@@ -35,7 +35,7 @@ public class MyByteToMessage extends ByteToMessageCodec<Integer> {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         int e = in.readInt();
-        System.out.println("-------数据解码，将bytebuf解码为：" + e);
+        //System.out.println("-------数据解码，将bytebuf解码为：" + e);
 
         out.add(e);
     }

@@ -766,7 +766,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (listeners instanceof DefaultFutureListeners) {
-            // Copy DefaultFutureListeners into an array of listeners.
+            // 将DefaultFutureListeners复制到侦听器数组中。
             DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
             int progressiveSize = dfl.progressiveSize();
             switch (progressiveSize) {

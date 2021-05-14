@@ -199,7 +199,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     // 能够分配出缓存，所以继续
                     return;
                 }
-                //除16
+                //除16  能得到应该分配到 tiny数组的位置  16  32 48 64.......496   都是16的倍数
                 tableIdx = tinyIdx(normCapacity);
                 table = tinySubpagePools;
             } else {

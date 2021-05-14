@@ -118,6 +118,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     //存放节点所对应的高度
     private final byte[] depthMap;
     //表示该PoolChunk所包含的PoolSubpage。也就是PoolChunk连续的可用内存。
+    //// PoolChunk 中管理的 2048 个 8K 内存块
     private final PoolSubpage<T>[] subpages;
     /** 用于确定请求的容量是否等于或大于pageSize。 */
     private final int subpageOverflowMask;
@@ -147,7 +148,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     PoolChunk<T> next;
 
     // TODO: Test if adding padding helps under contention
-    //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
+    //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;  一个 chunkSize是16M
 
     PoolChunk(PoolArena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize, int offset) {
         unpooled = false;
@@ -166,11 +167,10 @@ final class PoolChunk<T> implements PoolChunkMetric {
         freeBytes = chunkSize;
 
         assert maxOrder < 30 : "maxOrder should be < 30, but is: " + maxOrder;
-        maxSubpageAllocs = 1 << maxOrder;
-
+        maxSubpageAllocs = 1 << maxOrder; //右移11层
         // 生成内存映射。
         //PoolChunk中所有的PoolSubpage都放在PoolSubpage[] subpages中，为了更好的分配，Netty用一颗平衡二叉树记录每个PoolSubpage的分配情况   2048
-        memoryMap = new byte[maxSubpageAllocs << 1];//已使用的内存
+        memoryMap = new byte[maxSubpageAllocs << 1];//已使用的内存  11层 满二叉树为4096个节点
         depthMap = new byte[memoryMap.length];//节点深度
         //开始构建一个平衡二叉树
         int memoryMapIndex = 1;
@@ -358,7 +358,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         if (id < 0) {
             return id;
         }
-        //空闲内存-刚刚分配的内存
+        //空闲内存-刚刚分配的内存   16M - 分配的规范内存
         freeBytes -= runLength(id);
         //这里返回的id一定是平衡二叉树中未使用的内存空间
         return id;
@@ -375,21 +375,24 @@ final class PoolChunk<T> implements PoolChunkMetric {
         //获取PoolArena拥有的PoolSubPage池的头部，并在其上进行同步。
         // 这是必需的，因为我们可能会重新添加它，从而更改链表的结构。
         PoolSubpage<T> head = arena.findSubpagePoolHead(normCapacity);
-        int d = maxOrder; // 子页面只能从页面分配，即离开
+        // 子页面只能从页面分配，即离开
+        int d = maxOrder;
         synchronized (head) {
+            //
             int id = allocateNode(d);
             if (id < 0) {
                 return id;
             }
-
+            //记录哪些 Page 被转化为 Subpage
             final PoolSubpage<T>[] subpages = this.subpages;
             final int pageSize = this.pageSize;
 
             freeBytes -= pageSize;
-
+            //计算 pageID对应subpage的Id   2048对应0   2049对应1   2049 ^ 2048 = 1
             int subpageIdx = subpageIdx(id);
             PoolSubpage<T> subpage = subpages[subpageIdx];
             if (subpage == null) {
+                // 创建 PoolSubpage，并切分为相同大小的子内存块，然后加入 PoolArena 对应的双向链表中
                 subpage = new PoolSubpage<T>(head, this, id, runOffset(id), pageSize, normCapacity);
                 subpages[subpageIdx] = subpage;
             } else {
@@ -482,7 +485,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private static int log2(int val) {
-        // compute the (0-based, with lsb = 0) position of highest set bit i.e, log2
+        // 计算最高设置位的位置（从0开始，lsb = 0），即log2
         return INTEGER_SIZE_MINUS_ONE - Integer.numberOfLeadingZeros(val);
     }
 
@@ -492,15 +495,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private int runOffset(int id) {
-        // represents the 0-based offset in #bytes from start of the byte-array chunk
+        // 表示从字节数组块开始的字节中从0开始的偏移量
         int shift = id ^ 1 << depth(id);
         return shift * runLength(id);
     }
 
     private int subpageIdx(int memoryMapIdx) {
-        return memoryMapIdx ^ maxSubpageAllocs; // remove highest set bit, to get offset
+        return memoryMapIdx ^ maxSubpageAllocs; // 删除最高设置位以获得偏移量
     }
-
     private static int memoryMapIdx(long handle) {
         return (int) handle;
     }

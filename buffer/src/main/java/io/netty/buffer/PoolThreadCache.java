@@ -188,6 +188,7 @@ final class PoolThreadCache {
             return false;
         }
         boolean allocated = cache.allocate(buf, reqCapacity);
+        //内存整理   默认每执行 8192 次 allocate()，就会调用一次 trim() 进行内存整理
         if (++ allocations >= freeSweepAllocationThreshold) {
             allocations = 0;
             trim();
@@ -222,7 +223,7 @@ final class PoolThreadCache {
         }
     }
 
-    /// TODO: In the future when we move to Java9+ we should use java.lang.ref.Cleaner.
+    /// TODO: 将来当我们转向Java9 +时，应该使用java.lang.ref.Cleaner。
     @Override
     protected void finalize() throws Throwable {
         try {
@@ -233,11 +234,11 @@ final class PoolThreadCache {
     }
 
     /**
-     *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
+     * 如果使用该缓存的线程即将存在以从缓存中释放资源，则应调用
      */
     void free(boolean finalizer) {
-        // As free() may be called either by the finalizer or by FastThreadLocal.onRemoval(...) we need to ensure
-        // we only call this one time.
+        // 由于finalizer或FastThreadLocal.onRemoval（...）可能会调用free（），因此我们需要确保
+        // 我们只打电话一次。
         if (freed.compareAndSet(false, true)) {
             int numFreed = free(tinySubPageDirectCaches, finalizer) +
                     free(smallSubPageDirectCaches, finalizer) +
@@ -411,7 +412,7 @@ final class PoolThreadCache {
             initBuf(entry.chunk, entry.nioBuffer, entry.handle, buf, reqCapacity);
             entry.recycle();
 
-            // allocations is not thread-safe which is fine as this is only called from the same thread all time.
+            // 分配不是线程安全的，这很好，因为它总是一直从同一线程调用。
             ++ allocations;
             return true;
         }
@@ -441,10 +442,13 @@ final class PoolThreadCache {
          * Free up cached {@link PoolChunk}s if not allocated frequently enough.
          */
         public final void trim() {
+            //通过 size - allocations 衡量内存分配执行的频繁程度，其中 size 为该 MemoryRegionCache 对应的内存规格大小，size 为固定值，
+            // 例如 Tiny 类型默认为 512。allocations 表示 MemoryRegionCache 距离上一次内存整理已经发生了多少次 allocate 调用，
+            // 当调用次数小于 size 时，表示 MemoryRegionCache 中缓存的内存块并不常用，从队列中取出内存块依次释放。
             int free = size - allocations;
             allocations = 0;
 
-            // We not even allocated all the number that are
+            //我们甚至没有分配所有的
             if (free > 0) {
                 free(free, false);
             }

@@ -139,6 +139,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     }
 
     void add(PoolChunk<T> chunk) {
+        //当前的内存使用量大于限制的最大内存的时候后   将该chunk后移
         if (chunk.usage() >= maxUsage) {
             nextList.add(chunk);
             return;
