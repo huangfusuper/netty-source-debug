@@ -199,6 +199,9 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
      * 长度域的长度
      */
     private final int lengthFieldLength;
+    /**
+     * /长度域偏移量 + 长度域的长度  等于数据长度域尾部的位置
+     */
     private final int lengthFieldEndOffset;
     /**
      * 长度域长度 + 这个属性 等于在真正的数据包长度
@@ -396,17 +399,20 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
      * @param frameLength 本次要抽取的长度
      */
     private void exceededFrameLength(ByteBuf in, long frameLength) {
-        //数据包 - 可读字节数
+        //当前数据包长度 - 可读字节数 = 剩余的没有满足数据包的长度
         long discard = frameLength - in.readableBytes();
         tooLongFrameLength = frameLength;
         //发现本次缓冲区里还有数据包以外的数据 证明还有数据没读 只需要吧现在超长的数据跳过就可以读下一批数据了
+        //明显这里面的数据包含下一批数，跳过超额的长度，等待下次读取
         if (discard < 0) {
             // 缓冲区包含更多的字节，然后是frameLength，所以我们现在就可以丢弃所有字节
             in.skipBytes((int) frameLength);
+        //没有读完
         } else {
             // 进入丢弃模式并丢弃到目前为止收到的所有内容。
             discardingTooLongFrame = true;
             //还没丢万  可读字节数没有达到一个数据包的长度 本次丢弃的只是一部分 后续记录一下  再来数据了  在丢弃 discard个
+            //记录下 还有多少个没有丢，一会丢掉它
             bytesToDiscard = discard;
             //跳过全部的数据
             in.skipBytes(in.readableBytes());
@@ -448,7 +454,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         if (frameLength < 0) {
             failOnNegativeLengthField(in, frameLength, lengthFieldEndOffset);
         }
-        //算出本次应该读取到的末尾位置
+        //算出本次应该读取到的末尾位置  计算本次数据包的再总数包的末尾位置
         frameLength += lengthAdjustment + lengthFieldEndOffset;
 
         //抽取出来的长度是小于长度域尾部的位置的话    就抛异常 同时跳过 该字节数
@@ -465,6 +471,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         int frameLengthInt = (int) frameLength;
         //如果当前可读字节数小于当前的数据包长度  就返回 等待下一次读取
         if (in.readableBytes() < frameLengthInt) {
+            //不读了
             return null;
         }
 
@@ -475,10 +482,12 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         //跳过需要跳过的数据
         in.skipBytes(initialBytesToStrip);
 
-        // 提取框
+        // 获取当前读指针的位置
         int readerIndex = in.readerIndex();
+        //数据长度 - 需要跳过的字节数
         int actualFrameLength = frameLengthInt - initialBytesToStrip;
         //从当前的都指针读取actualFrameLength个字节
+        //从byteBuf里面读
         ByteBuf frame = extractFrame(ctx, in, readerIndex, actualFrameLength);
         //将都指针调整到数据包末尾
         in.readerIndex(readerIndex + actualFrameLength);
@@ -523,10 +532,11 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     private void failIfNecessary(boolean firstDetectionOfTooLongFrame) {
         //查看剩余可丢弃的数据是否为0  为0证明需要丢弃的数据包已经全部丢弃完成 需要对个状态进行复位      
         if (bytesToDiscard == 0) {
-            // 重置为初始状态，并告知处理程序
-            // 框架太大。
+            //数据包长度
             long tooLongFrameLength = this.tooLongFrameLength;
+            //归0
             this.tooLongFrameLength = 0;
+            //丢弃模式改为false
             discardingTooLongFrame = false;
             if (!failFast || firstDetectionOfTooLongFrame) {
                 fail(tooLongFrameLength);

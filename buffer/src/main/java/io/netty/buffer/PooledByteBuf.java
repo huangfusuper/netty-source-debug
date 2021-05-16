@@ -73,12 +73,16 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     /**
-     * Method must be called before reuse this {@link PooledByteBufAllocator}
+     * 在重用此方法之前必须先调用方法 {@link PooledByteBufAllocator}
      */
     final void reuse(int maxCapacity) {
+        //重置最大容量
         maxCapacity(maxCapacity);
+        //重置引用
         resetRefCnt();
+        //重置读写指针
         setIndex0(0, 0);
+        //重置标识
         discardMarks();
     }
 

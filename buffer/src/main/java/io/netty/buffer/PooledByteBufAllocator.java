@@ -505,6 +505,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas);
 
             final Thread current = Thread.currentThread();
+            //前面将所有的Thread都包装成了 FastThreadLocalThread
             if (useCacheForAllThreads || current instanceof FastThreadLocalThread) {
                 final PoolThreadCache cache = new PoolThreadCache(
                         heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,

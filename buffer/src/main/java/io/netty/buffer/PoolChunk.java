@@ -178,7 +178,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         for (int d = 0; d <= maxOrder; ++ d) {
             //深度 计算深度
             int depth = 1 << d;
-            //memoryMap={第0位没用到,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4},//memoryMap数组元素长度为 {(1<<maxOrder)>>1}}=32
+            //memoryMap={第0位没用到,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4}
             for (int p = 0; p < depth; ++ p) {
                 // 在每个级别中从左到右遍历并将值设置为子树的深度
                 memoryMap[memoryMapIndex] = (byte) d;

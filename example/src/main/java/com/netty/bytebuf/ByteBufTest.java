@@ -11,7 +11,7 @@ import io.netty.buffer.PooledByteBufAllocator;
 public class ByteBufTest {
 
     public static void main(String[] args) {
-        ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(32);
+        ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(12);
         byteBuf.release();
     }
 }

@@ -381,7 +381,7 @@ final class PoolThreadCache {
         }
 
         /**
-         * Init the {@link PooledByteBuf} using the provided chunk and handle with the capacity restrictions.
+         * 使用提供的块初始化{@link PooledByteBuf}并使用容量限制进行处理。
          */
         protected abstract void initBuf(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle,
                                         PooledByteBuf<T> buf, int reqCapacity);

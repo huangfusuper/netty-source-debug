@@ -241,7 +241,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         if (normCapacity <= chunkSize) {
             //
             if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
-                // was able to allocate out of the cache so move on
+                // 能够分配出缓存，所以继续
                 return;
             }
             synchronized (this) {

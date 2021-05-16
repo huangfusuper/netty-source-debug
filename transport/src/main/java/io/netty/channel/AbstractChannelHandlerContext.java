@@ -988,7 +988,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
      * but not called {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}.
      */
     private boolean invokeHandler() {
-        // Store in local variable to reduce volatile reads.
+        // 存储在局部变量中以减少易失性读取。
         int handlerState = this.handlerState;
         return handlerState == ADD_COMPLETE || (!ordered && handlerState == ADD_PENDING);
     }
